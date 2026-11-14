@@ -556,7 +556,7 @@ namespace WorldRush.Runtime
         private void BuildKitScenery(float trackWidth, DeterministicRandom rnd)
         {
             var kit = new EnvironmentKit();
-            Debug.Log($"[FersaSurfer] Stadt-Modelle: {kit.Buildings.Count} Gebäude, {kit.Props.Count} Deko, {kit.Cars.Count} Autos");
+            Debug.Log($"[FersaSurfer] Version {ProductInfo.Version}-mat3 · Stadt-Modelle: {kit.Buildings.Count} Gebäude, {kit.Props.Count} Deko, {kit.Cars.Count} Autos");
             if (!kit.HasAny) return;
             float half = trackWidth * 0.5f;
             _kitBuildings = kit.Buildings.Count > 0;
@@ -901,6 +901,7 @@ namespace WorldRush.Runtime
                 lit.SetFloat("_Cutoff", m.HasProperty("_Cutoff") ? m.GetFloat("_Cutoff") : 0.5f);
             }
             Converted[m] = lit;
+            Debug.Log($"[FersaSurfer] Material umgewandelt: '{m.name}' (Shader '{name}') → URP/Lit, Textur: {(tex != null ? tex.name : "-")}");
             return lit;
         }
 
