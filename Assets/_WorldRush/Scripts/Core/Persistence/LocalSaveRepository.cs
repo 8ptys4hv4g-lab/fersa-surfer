@@ -70,7 +70,6 @@ namespace WorldRush.Core
 
         public string FilePath { get; }
         public string BackupPath => FilePath + ".bak";
-        private string TempPath => FilePath + ".tmp";
 
         public SaveData Load()
         {
@@ -85,26 +84,7 @@ namespace WorldRush.Core
             string dir = Path.GetDirectoryName(FilePath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-            File.WriteAllText(TempPath, data.ToJson(), new UTF8Encoding(false));
-
-            if (File.Exists(FilePath))
-            {
-                try
-                {
-                    File.Replace(TempPath, FilePath, BackupPath);
-                    return;
-                }
-                catch (PlatformNotSupportedException) { }
-                catch (IOException) { }
-
-                File.Copy(FilePath, BackupPath, true);
-                File.Copy(TempPath, FilePath, true);
-                File.Delete(TempPath);
-            }
-            else
-            {
-                File.Move(TempPath, FilePath);
-            }
+            AtomicFile.WriteAllText(FilePath, data.ToJson());
         }
 
         private static bool TryLoad(string path, out SaveData data)

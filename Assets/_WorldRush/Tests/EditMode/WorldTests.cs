@@ -200,3 +200,123 @@ namespace WorldRush.Tests
         }
     }
 }
+
+namespace WorldRush.Tests
+{
+    using System.Collections.Generic;
+    using System.IO;
+    using NUnit.Framework;
+    using WorldRush.Core;
+    using WorldRush.Core.World;
+
+    public class WorldPersistenceTests
+    {
+        private string _dir;
+
+        [SetUp]
+        public void SetUp() => _dir = Path.Combine(Path.GetTempPath(), "fs-world-" + System.Guid.NewGuid().ToString("N"));
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (Directory.Exists(_dir)) Directory.Delete(_dir, true);
+        }
+
+        private static WorldDefinition Sample()
+        {
+            var doc = new DrawingDocument();
+            doc.AddStroke(BrushKind.Road, new List<Vec2> { new Vec2(0, 0), new Vec2(5, 150), new Vec2(0, 300) });
+            doc.AddStroke(BrushKind.House, new List<Vec2> { new Vec2(20, 40), new Vec2(30, 52) });
+            doc.AddStroke(BrushKind.Garden, new List<Vec2> { new Vec2(-40, 20), new Vec2(-20, 20), new Vec2(-20, 40), new Vec2(-40, 40) });
+            return WorldDefinition.FromDocument(doc, "Neon \"Stadt\"\n", 77);
+        }
+
+        [Test]
+        public void RoundTripRebuildsIdenticalWorld()
+        {
+            var original = Sample();
+            Assert.IsTrue(WorldDefinition.TryFromJson(original.ToJson(), out var loaded, out var err), err);
+            Assert.AreEqual(original.Name, loaded.Name);
+            Assert.AreEqual(original.Seed, loaded.Seed);
+            Assert.AreEqual(original.Strokes.Count, loaded.Strokes.Count);
+
+            var a = original.BuildPlan();
+            var b = loaded.BuildPlan();
+            Assert.AreEqual(a.Objects.Count, b.Objects.Count);
+            for (int i = 0; i < a.Objects.Count; i++)
+            {
+                Assert.AreEqual(a.Objects[i].X, b.Objects[i].X, 0.05f);
+                Assert.AreEqual(a.Objects[i].Z, b.Objects[i].Z, 0.05f);
+            }
+        }
+
+        [Test]
+        public void NameIsSanitized()
+        {
+            Assert.AreEqual("Neon \"Stadt\"", Sample().Name);
+            Assert.AreEqual(WorldDefinition.MaxNameLength, WorldDefinition.SanitizeName(new string('a', 500)).Length);
+            Assert.AreEqual("Meine Welt", WorldDefinition.SanitizeName("  "));
+        }
+
+        [TestCase("")]
+        [TestCase("{")]
+        [TestCase("[1,2]")]
+        [TestCase("{\"schemaVersion\":99}")]
+        [TestCase("{\"schemaVersion\":1}garbage")]
+        public void InvalidFilesAreRejected(string json)
+        {
+            Assert.IsFalse(WorldDefinition.TryFromJson(json, out _, out var err));
+            Assert.IsNotEmpty(err);
+        }
+
+        [Test]
+        public void ManipulatedContentIsCleaned()
+        {
+            string json = "{\"schemaVersion\":1,\"worldId\":\"../../etc/passwd\",\"name\":\"x\",\"seed\":1e30," +
+                          "\"strokes\":[{\"brush\":\"Rocket\",\"points\":[0,0,1,1]},{\"brush\":\"Tree\",\"points\":[1e9,5,\"x\",3]},{\"brush\":\"Tree\",\"points\":[1,2,3,4]}]}";
+            Assert.IsTrue(WorldDefinition.TryFromJson(json, out var w, out _));
+            Assert.IsFalse(w.WorldId.Contains("/"));
+            Assert.AreEqual(0, w.Seed);
+            Assert.AreEqual(2, w.Strokes.Count); // "Rocket" verworfen
+            foreach (var s in w.Strokes)
+                foreach (var p in s.Points) Assert.LessOrEqual(System.Math.Abs(p.X), DrawingDocument.PlanHalfWidth);
+        }
+
+        [Test]
+        public void DeepNestingIsRejected()
+        {
+            string deep = new string('[', 1000) + new string(']', 1000);
+            Assert.IsFalse(MiniJson.TryParse(deep, out _));
+        }
+
+        [Test]
+        public void RepositorySaveListLoadDelete()
+        {
+            var repo = new WorldRepository(_dir);
+            var w = Sample();
+            repo.Save(w);
+            repo.Save(w); // zweites Speichern erzeugt .bak
+            CollectionAssert.AreEqual(new[] { w.WorldId }, repo.ListIds());
+
+            File.WriteAllText(Path.Combine(_dir, w.WorldId + ".world.json"), "kaputt");
+            Assert.IsTrue(repo.TryLoad(w.WorldId, out var loaded, out _)); // aus Backup
+            Assert.AreEqual(w.Strokes.Count, loaded.Strokes.Count);
+
+            Assert.IsTrue(repo.Delete(w.WorldId));
+            Assert.IsEmpty(repo.ListIds());
+            Assert.IsFalse(repo.TryLoad(w.WorldId, out _, out _));
+        }
+
+        [Test]
+        public void MiniJsonRoundTripsSpecialCharacters()
+        {
+            var obj = new Dictionary<string, object> { { "s", "ä\"\\\n\t\u0001" }, { "n", 1.5 }, { "b", true }, { "z", null } };
+            Assert.IsTrue(MiniJson.TryParse(MiniJson.Serialize(obj), out var back));
+            var d = (Dictionary<string, object>)back;
+            Assert.AreEqual("ä\"\\\n\t\u0001", d["s"]);
+            Assert.AreEqual(1.5, d["n"]);
+            Assert.AreEqual(true, d["b"]);
+            Assert.IsNull(d["z"]);
+        }
+    }
+}

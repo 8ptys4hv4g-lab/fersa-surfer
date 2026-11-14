@@ -19,7 +19,7 @@ Fertig umgesetzt:
 
 Tatsächlich ausgeführt/getestet:
 - `dotnet build` des Kerns als .NET Standard 2.1 / C# 9 (= Unity-6-Niveau): 0 Fehler, 0 Warnungen
-- `dotnet test` (tools/CoreTests): 84 von 84 Tests bestanden (inkl. Welt-Editor-Abnahmeszenario) (inkl. Outfit-Text: "Blonde Haare, rotes Kleid, braune Schuhe."), u. a.
+- `dotnet test` (tools/CoreTests): 95 von 95 Tests bestanden (inkl. Welt-Editor-Abnahmeszenario, Welt speichern/laden) (inkl. Outfit-Text: "Blonde Haare, rotes Kleid, braune Schuhe."), u. a.
   - Strecke für 5 Seeds über 5 km sicher
   - Test-Bot läuft 5 Minuten (> 4 km) ohne Unfall, Speicher bleibt begrenzt
   - Keine "Tunnel"-Fehler bei Rucklern
