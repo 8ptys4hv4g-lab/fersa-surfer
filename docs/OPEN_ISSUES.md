@@ -12,6 +12,6 @@
 | 8 | Git LFS für große 3D-/Audio-Dateien einrichten, sobald solche Dateien dazukommen. | 🟢 niedrig | M2 |
 | 9 | Sehr lange Läufe: Die Z-Koordinate wächst unbegrenzt. Bis etwa 20 km ist die Genauigkeit ausreichend. Danach Floating Origin einbauen. | 🟢 niedrig | M8 |
 | 10 | Hindernis-Ansichten werden pro Reihe neu erzeugt. Pooling für Mobile ergänzen. | 🟢 niedrig | M8 |
-| 11 | Cloud-Build braucht 3 GitHub-Secrets (Unity-Lizenz). Erster Lauf ist ungeprüft (Unity-Version 6000.0.32f1). | 🔴 hoch | Auftraggeber: Secrets anlegen |
+| 11 | Cloud-Build braucht 3 GitHub-Secrets (Unity-Lizenz). Erster Lauf ist ungeprüft (Unity-Version 6000.6.9f1). | 🔴 hoch | Auftraggeber: Secrets anlegen |
 | 12 | Nintendo Switch, PlayStation, Xbox: nur mit Zulassung durch den Hersteller. | 🟢 später | Geschäftsentscheidung |
 | 13 | iOS: Apple Developer Program (99 $/Jahr) + macOS-Build. | 🟡 mittel | M9, Kostenfreigabe |

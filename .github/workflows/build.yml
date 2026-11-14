@@ -5,8 +5,8 @@ on:
   workflow_dispatch:
     inputs:
       unityVersion:
-        description: 'Unity-Version'
-        default: '6000.0.32f1'
+        description: 'Unity-Version (auto = aus ProjectSettings/ProjectVersion.txt)'
+        default: 'auto'
         required: true
 jobs:
   build:

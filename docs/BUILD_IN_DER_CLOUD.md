@@ -38,7 +38,7 @@ Unity verlangt eine (kostenlose) Lizenz. Die muss **einmal** auf deinem PC erzeu
 
 ## Hinweis
 Der Workflow ist noch **nicht ausgeführt**. Folgende Punkte prüft der erste Lauf:
-- die Unity-Version `6000.0.32f1`
+- die Unity-Version (aus `ProjectSettings/ProjectVersion.txt`, aktuell 6000.6.9f1)
 - die Paketversionen
 - ob das Skript `CiBuild.cs` kompiliert
 
