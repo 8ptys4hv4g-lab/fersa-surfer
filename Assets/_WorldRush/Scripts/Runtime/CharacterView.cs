@@ -135,22 +135,23 @@ namespace WorldRush.Runtime
 
         private static bool TryMeshBounds(GameObject go, out Bounds bounds)
         {
-            bounds = default;
-            bool any = false;
-            void Add(Matrix4x4 m, Bounds local)
-            {
-                var c = local.center; var e = local.extents;
-                for (int i = 0; i < 8; i++)
-                {
-                    var p = m.MultiplyPoint3x4(c + new Vector3((i & 1) == 0 ? -e.x : e.x, (i & 2) == 0 ? -e.y : e.y, (i & 4) == 0 ? -e.z : e.z));
-                    if (!any) { bounds = new Bounds(p, Vector3.zero); any = true; } else bounds.Encapsulate(p);
-                }
-            }
+            var points = new List<Vector3>();
             foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                if (smr.sharedMesh != null) Add(smr.transform.localToWorldMatrix, smr.sharedMesh.bounds);
+                if (smr.sharedMesh != null) AddCorners(points, smr.transform.localToWorldMatrix, smr.sharedMesh.bounds);
             foreach (var mf in go.GetComponentsInChildren<MeshFilter>(true))
-                if (mf.sharedMesh != null) Add(mf.transform.localToWorldMatrix, mf.sharedMesh.bounds);
-            return any;
+                if (mf.sharedMesh != null) AddCorners(points, mf.transform.localToWorldMatrix, mf.sharedMesh.bounds);
+
+            bounds = new Bounds(points.Count > 0 ? points[0] : Vector3.zero, Vector3.zero);
+            for (int i = 1; i < points.Count; i++) bounds.Encapsulate(points[i]);
+            return points.Count > 0;
+        }
+
+        private static void AddCorners(List<Vector3> points, Matrix4x4 m, Bounds local)
+        {
+            var c = local.center;
+            var e = local.extents;
+            for (int i = 0; i < 8; i++)
+                points.Add(m.MultiplyPoint3x4(c + new Vector3((i & 1) == 0 ? -e.x : e.x, (i & 2) == 0 ? -e.y : e.y, (i & 4) == 0 ? -e.z : e.z)));
         }
 
         private void PickClips()
