@@ -13,8 +13,8 @@ Die Grundlage ist der Masterplan v1.0 (`archive/2026-11-14_MASTERPLAN_v1.0.md`).
 | M1 | Spielbarer Kern: 3 Spuren, Sprung, Rutschen, Hindernisse, Münzen, Punkte, Game Over | 🟡 Logik ✅ | Im Unity-Play-Modus spielbar | Opus / Medium |
 | M2 | Premium-3D-Stadt „Neon Garden City“, Kamera, Figur mit Animationen | ⬜ | Schöne 3D-Szene, FPS-Messung | Opus / High |
 | M3 | Menüs mit eigener Schrift, Einstellungen, Highscore | ⬜ | Kompletter Offline-Spielablauf | Sonnet / Medium |
-| M4 | Welt-Editor 2D: zeichnen, Pinsel, Rückgängig/Wiederholen, speichern | ⬜ | Editierbarer Weltplan | Opus / High |
-| M5 | Zeichnung → echte 3D-Welt | ⬜ | Straße, Häuser, Bäume und See werden 3D | Opus / High |
+| M4 | Welt-Editor 2D: zeichnen, Pinsel, Rückgängig/Wiederholen, speichern | 🟡 Logik ✅ (getestet), Zeichen-UI + Speichern fehlt | Editierbarer Weltplan | Opus / High |
+| M5 | Zeichnung → echte 3D-Welt | 🟡 Weltplan-Logik ✅, 3D-Aufbau fehlt | Straße, Häuser, Bäume und See werden 3D | Opus / High |
 | M6 | Outfit-Studio: Avatar, Katalog, Farben | ⬜ | Outfits wählen und im Lauf tragen | Sonnet / Medium |
 | M7 | Text-Outfits (DE/EN) | 🟡 Parser + Katalog-Logik ✅ (getestet), 3D/UI fehlt | „Blonde Haare, rotes Kleid, braune Schuhe.“ funktioniert | Sonnet / Medium |
 | M8 | Android-/Tablet-Qualität, echte Testbuilds | ⬜ | Stabil auf Referenzgeräten | Opus / Medium |
