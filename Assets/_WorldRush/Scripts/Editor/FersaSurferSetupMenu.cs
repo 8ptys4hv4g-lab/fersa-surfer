@@ -95,6 +95,51 @@ namespace WorldRush.EditorTools
             Debug.Log($"[FersaSurfer] Figur '{go.name}' wird jetzt im Spiel verwendet. ▶ drücken.");
         }
 
+        private static readonly string[] BuildingWords = { "building", "house", "shop", "store", "tower", "apartment", "office", "bank", "hospital", "school", "cafe", "restaurant", "hotel", "market", "skyscraper", "home", "station", "bakery", "cinema", "mall" };
+        private static readonly string[] CarWords = { "car", "taxi", "bus", "truck", "van", "police", "ambulance", "vehicle", "suv", "pickup", "firetruck" };
+        private static readonly string[] SkipWords = { "road", "street", "crossing", "sidewalk", "terrain", "ground", "tile", "floor", "plane", "base", "demo", "scene", "camera", "light probe" };
+
+        [MenuItem("Fersa Surfer/5. Ausgewählten Stadt-Ordner verwenden", priority = 5)]
+        public static void UseSelectedCityFolder()
+        {
+            string folder = Selection.activeObject != null ? AssetDatabase.GetAssetPath(Selection.activeObject) : null;
+            if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
+            {
+                EditorUtility.DisplayDialog("Fersa Surfer", "Bitte zuerst im Project-Fenster den Ordner des Stadt-Pakets anklicken (z. B. den Prefabs-Ordner).", "OK");
+                return;
+            }
+            var guids = AssetDatabase.FindAssets("t:Prefab", new[] { folder });
+            if (guids.Length == 0) guids = AssetDatabase.FindAssets("t:Model", new[] { folder });
+
+            const string env = Root + "/Resources/Environment";
+            foreach (var sub in new[] { "Buildings", "Props", "Cars" })
+            {
+                string dir = env + "/" + sub;
+                if (AssetDatabase.IsValidFolder(dir)) AssetDatabase.DeleteAsset(dir); // alte Modelle (z. B. Quaternius) ersetzen
+                AssetDatabase.CreateFolder(env, sub);
+            }
+
+            int b = 0, c = 0, p = 0, skipped = 0;
+            foreach (var guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                string name = System.IO.Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
+                if (Has(name, SkipWords)) { skipped++; continue; }
+                string sub = Has(name, CarWords) ? "Cars" : Has(name, BuildingWords) ? "Buildings" : "Props";
+                if (!AssetDatabase.CopyAsset(path, $"{env}/{sub}/{System.IO.Path.GetFileName(path)}")) continue;
+                if (sub == "Cars") c++; else if (sub == "Buildings") b++; else p++;
+            }
+            AssetDatabase.Refresh();
+            Debug.Log($"[FersaSurfer] Stadt übernommen: {b} Gebäude, {c} Autos, {p} Deko ({skipped} Straßen-/Bodenteile übersprungen). ▶ drücken.");
+            EditorUtility.DisplayDialog("Fersa Surfer", $"Übernommen: {b} Gebäude, {c} Autos, {p} Deko.\nJetzt ▶ drücken.", "OK");
+        }
+
+        private static bool Has(string name, string[] words)
+        {
+            foreach (var w in words) if (name.Contains(w)) return true;
+            return false;
+        }
+
         private static Material Mat(string name, Color color, float smoothness, Color? emission = null)
         {
             string path = $"{MaterialDir}/{name}.mat";
