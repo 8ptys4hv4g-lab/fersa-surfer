@@ -11,6 +11,7 @@
   --body:"Nunito","Segoe UI",system-ui,sans-serif;
   color-scheme:dark;
 }
+[hidden]{display:none!important}
 html,body{height:100%;margin:0;background:var(--night);color:var(--ink);font-family:var(--body);overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none}
 #game{position:fixed;inset:0;display:block;width:100%;height:100%}
 .hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
@@ -221,7 +222,7 @@ const armL = new THREE.Group(), armR = new THREE.Group(); armL.position.set(-.36
 for (const arm of [armL, armR]) part(new THREE.CylinderGeometry(.07,.06,.6,8), mats.skin, 0, -.3, 0, arm);
 part(new THREE.SphereGeometry(.24, 16, 12), mats.skin, 0, 1.68, 0);
 const hairCap = part(new THREE.SphereGeometry(.26, 16, 12, 0, Math.PI*2, 0, Math.PI*.55), mats.hair, 0, 1.71, -.01);
-const tail = part(new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(.09,.32,4,8) : new THREE.CylinderGeometry(.09,.06,.45,8), mats.hair, 0, 1.55, -.26);
+const tail = part(new THREE.CylinderGeometry(.09,.06,.45,8), mats.hair, 0, 1.55, -.26);
 tail.rotation.x = .5;
 const cap = part(new THREE.CylinderGeometry(.27,.27,.12,16), mats.cap, 0, 1.86, 0); cap.visible = false;
 player.rotation.y = Math.PI; // schaut in Laufrichtung (-Z)
