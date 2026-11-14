@@ -621,6 +621,7 @@ namespace WorldRush.Runtime
         /// <summary>Moderner Look für importierte Modelle: leuchtende Fenster, glänzender Lack, sanfter Glanz.</summary>
         private void StyleModel(GameObject go)
         {
+            MaterialFactory.FixMaterials(go);
             foreach (var r in go.GetComponentsInChildren<Renderer>(true))
             {
                 var mats = r.sharedMaterials;
@@ -849,6 +850,59 @@ namespace WorldRush.Runtime
                 m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             }
             return m;
+        }
+
+        private static readonly Dictionary<Material, Material> Converted = new Dictionary<Material, Material>();
+
+        /// <summary>
+        /// Wandelt Materialien aus fremden Paketen (Built-in "Standard", eigene Toon-Shader …), die in URP pink
+        /// erscheinen würden, in URP/Lit um – Textur und Farbe bleiben erhalten.
+        /// </summary>
+        public static Material MakeCompatible(Material m)
+        {
+            if (m == null || GraphicsSettings.currentRenderPipeline == null) return m;
+            var shader = m.shader;
+            string name = shader != null ? shader.name : "";
+            bool ok = shader != null && shader.isSupported &&
+                      (name.StartsWith("Universal Render Pipeline/") || name.StartsWith("Shader Graphs/") || name.StartsWith("Sprites/") || name.StartsWith("UI/"));
+            if (ok) return m;
+            if (Converted.TryGetValue(m, out var done)) return done;
+
+            var lit = new Material(LitShader()) { name = m.name + " (URP)" };
+            Texture tex = null;
+            foreach (var prop in new[] { "_BaseMap", "_MainTex", "_BaseColorMap", "_Albedo", "_Diffuse", "_MainTexture" })
+                if (m.HasProperty(prop) && m.GetTexture(prop) != null) { tex = m.GetTexture(prop); break; }
+            Color color = Color.white;
+            foreach (var prop in new[] { "_BaseColor", "_Color", "_MainColor", "_Tint" })
+                if (m.HasProperty(prop)) { color = m.GetColor(prop); break; }
+            if (tex != null) { lit.SetTexture("_BaseMap", tex); lit.mainTextureScale = m.mainTextureScale; }
+            lit.SetColor("_BaseColor", color);
+            lit.SetFloat("_Smoothness", 0.25f);
+            if (m.HasProperty("_Cutoff") || m.IsKeywordEnabled("_ALPHATEST_ON"))
+            {
+                lit.SetFloat("_AlphaClip", 1f);
+                lit.EnableKeyword("_ALPHATEST_ON");
+                lit.SetFloat("_Cutoff", m.HasProperty("_Cutoff") ? m.GetFloat("_Cutoff") : 0.5f);
+            }
+            Converted[m] = lit;
+            return lit;
+        }
+
+        /// <summary>Alle Materialien eines Objekts URP-tauglich machen.</summary>
+        public static void FixMaterials(GameObject go)
+        {
+            foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+            {
+                if (r is ParticleSystemRenderer) continue;
+                var mats = r.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    var fixedMat = MakeCompatible(mats[i]);
+                    if (fixedMat != mats[i]) { mats[i] = fixedMat; changed = true; }
+                }
+                if (changed) r.sharedMaterials = mats;
+            }
         }
 
         /// <summary>Beidseitig sichtbar (für prozedurale Ringe/Kegel).</summary>

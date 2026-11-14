@@ -79,6 +79,7 @@ namespace WorldRush.Runtime
                 _model = Object.Instantiate(prefab, _body, false);
                 _model.name = "Model";
                 FitToHeight(_model, 2.0f);
+                MaterialFactory.FixMaterials(_model); // fremde Shader (pink) in URP umwandeln
                 _modelRenderers = _model.GetComponentsInChildren<Renderer>(true);
                 foreach (var r in _modelRenderers)
                 {
