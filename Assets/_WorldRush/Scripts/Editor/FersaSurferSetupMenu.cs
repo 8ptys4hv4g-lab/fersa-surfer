@@ -102,12 +102,16 @@ namespace WorldRush.EditorTools
         [MenuItem("Fersa Surfer/5. Ausgewählten Stadt-Ordner verwenden", priority = 5)]
         public static void UseSelectedCityFolder()
         {
+            if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog("Fersa Surfer", "Bitte zuerst das Spiel stoppen (■).", "OK"); return; }
             string folder = Selection.activeObject != null ? AssetDatabase.GetAssetPath(Selection.activeObject) : null;
-            if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
+            if (!string.IsNullOrEmpty(folder) && !AssetDatabase.IsValidFolder(folder)) folder = System.IO.Path.GetDirectoryName(folder)?.Replace('\\', '/');
+            if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder) || folder.StartsWith(Root)) folder = FindCityFolder();
+            if (folder == null)
             {
-                EditorUtility.DisplayDialog("Fersa Surfer", "Bitte zuerst im Project-Fenster den Ordner des Stadt-Pakets anklicken (z. B. den Prefabs-Ordner).", "OK");
+                EditorUtility.DisplayDialog("Fersa Surfer", "Kein Stadt-Paket gefunden. Bitte zuerst 'Cartoon City' über Window → Package Manager → My Assets importieren.", "OK");
                 return;
             }
+            Debug.Log("[FersaSurfer] Verwende Stadt-Ordner: " + folder);
             var guids = AssetDatabase.FindAssets("t:Prefab", new[] { folder });
             if (guids.Length == 0) guids = AssetDatabase.FindAssets("t:Model", new[] { folder });
 
@@ -134,7 +138,24 @@ namespace WorldRush.EditorTools
             EditorUtility.DisplayDialog("Fersa Surfer", $"Übernommen: {b} Gebäude, {c} Autos, {p} Deko.\nJetzt ▶ drücken.", "OK");
         }
 
-        private static bool Has(string name, string[] words)
+/// <summary>Sucht den Ordner eines importierten Stadt-Pakets (Name enthält "city"/"town"), bevorzugt dessen Prefabs-Ordner.</summary>
+        private static string FindCityFolder()
+        {
+            string best = null;
+            foreach (var guid in AssetDatabase.FindAssets("t:Folder", new[] { "Assets" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.StartsWith(Root)) continue;
+                string lower = path.ToLowerInvariant();
+                if (!lower.Contains("city") && !lower.Contains("town")) continue;
+                if (AssetDatabase.FindAssets("t:Prefab", new[] { path }).Length == 0) continue;
+                if (lower.EndsWith("/prefabs")) return path;
+                if (best == null || path.Length < best.Length) best = path;
+            }
+            return best;
+        }
+
+                private static bool Has(string name, string[] words)
         {
             foreach (var w in words) if (name.Contains(w)) return true;
             return false;
