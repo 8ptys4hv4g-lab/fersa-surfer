@@ -1,0 +1,43 @@
+name: Spiel bauen (Android / Windows / Browser)
+# Startet nur per Knopfdruck: GitHub → Actions → "Spiel bauen" → Run workflow.
+# Benötigt einmalig die Secrets UNITY_EMAIL, UNITY_PASSWORD, UNITY_LICENSE (siehe docs/BUILD_IN_DER_CLOUD.md).
+on:
+  workflow_dispatch:
+    inputs:
+      unityVersion:
+        description: 'Unity-Version'
+        default: '6000.0.32f1'
+        required: true
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [Android, StandaloneWindows64, WebGL]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Speicher freimachen
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ matrix.target }}-${{ hashFiles('Packages/manifest.json') }}
+          restore-keys: Library-${{ matrix.target }}-
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: ${{ inputs.unityVersion }}
+          targetPlatform: ${{ matrix.target }}
+          buildMethod: WorldRush.EditorTools.CiBuild.Build
+          buildName: FersaSurfer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FersaSurfer-${{ matrix.target }}
+          path: build/${{ matrix.target }}
+          retention-days: 14

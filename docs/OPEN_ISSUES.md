@@ -2,7 +2,7 @@
 
 | # | Punkt | Wichtigkeit | Wer / Wann |
 |---|---|---|---|
-| 1 | **Kein GitHub-Repository verbunden:** Der Code liegt nur in der Cloud-Sitzung und geht verloren, wenn sie endet. | 🔴 hoch | Auftraggeber: leeres privates Repo anlegen |
+| 1 | ~~Kein GitHub-Repository~~ → erledigt: github.com/8ptys4hv4g-lab/fersa-surfer | ✅ | – |
 | 2 | Unity-Skripte (Runtime/Editor) und der PlayMode-Test sind nicht in Unity kompiliert oder ausgeführt. | 🔴 hoch | Beim ersten Öffnen in Unity |
 | 3 | Paketversionen in `Packages/manifest.json` (URP 17.0.3, Input System 1.11.2, Test Framework 1.4.5) sind ungeprüft. Unity bietet bei Bedarf ein Update an. | 🟡 mittel | Beim ersten Öffnen |
 | 4 | URP-Pipeline-Asset wird nicht automatisch angelegt. Ohne URP nutzt der Prototyp Standard-Materialien. Sauber einrichten in M2. | 🟡 mittel | M2 |
@@ -12,3 +12,6 @@
 | 8 | Git LFS für große 3D-/Audio-Dateien einrichten, sobald solche Dateien dazukommen. | 🟢 niedrig | M2 |
 | 9 | Sehr lange Läufe: Die Z-Koordinate wächst unbegrenzt. Bis etwa 20 km ist die Genauigkeit ausreichend. Danach Floating Origin einbauen. | 🟢 niedrig | M8 |
 | 10 | Hindernis-Ansichten werden pro Reihe neu erzeugt. Pooling für Mobile ergänzen. | 🟢 niedrig | M8 |
+| 11 | Cloud-Build braucht 3 GitHub-Secrets (Unity-Lizenz). Erster Lauf ist ungeprüft (Unity-Version 6000.0.32f1). | 🔴 hoch | Auftraggeber: Secrets anlegen |
+| 12 | Nintendo Switch, PlayStation, Xbox: nur mit Zulassung durch den Hersteller. | 🟢 später | Geschäftsentscheidung |
+| 13 | iOS: Apple Developer Program (99 $/Jahr) + macOS-Build. | 🟡 mittel | M9, Kostenfreigabe |

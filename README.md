@@ -24,6 +24,9 @@ Der interne Code-Name ist **WorldRush**, so heißen auch die Ordner und Namespac
 
 Auch mit gedrückter Maus kannst du wischen.
 
+## Ohne eigenes Unity: in der Cloud bauen
+Siehe [`docs/BUILD_IN_DER_CLOUD.md`](docs/BUILD_IN_DER_CLOUD.md). GitHub baut dort Android, Windows und Browser auf Knopfdruck.
+
 ## Android-Testbuild
 
 1. **File → Build Profiles → Android → Switch Platform** wählen.

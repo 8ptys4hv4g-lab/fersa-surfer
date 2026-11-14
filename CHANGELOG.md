@@ -3,6 +3,9 @@
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
+### Hinzugefügt
+- GitHub Actions: Kern-Tests bei jedem Push; Cloud-Build für Android, Windows und WebGL per Knopfdruck (GameCI).
+- `CiBuild.cs` (automatischer Build) und `docs/BUILD_IN_DER_CLOUD.md`.
 
 ## [0.1.0] – 2026-11-14 · M0 + M1 (vorbereiteter Unity-Projektstand)
 ### Hinzugefügt
