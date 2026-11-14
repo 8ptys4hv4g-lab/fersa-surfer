@@ -70,9 +70,13 @@ namespace WorldRush.Runtime
                 }
                 _animation = _model.GetComponentInChildren<Animation>();
                 PickClips();
+                Debug.Log($"[FersaSurfer] 3D-Figur geladen: {prefab.name} · Renderer: {_modelRenderers.Length} · " +
+                          $"Animationen: {(_animation != null ? _animation.GetClipCount() : 0)} (Laufen: {_runClip ?? "-"}, Springen: {_jumpClip ?? "-"}, Stehen: {_idleClip ?? "-"})");
             }
             else
             {
+                int found = Resources.LoadAll<Object>("Characters").Length;
+                Debug.LogWarning($"[FersaSurfer] Keine 3D-Figur in Assets/_WorldRush/Resources/Characters gefunden (Dateien dort: {found}). Platzhalter-Figur wird verwendet.");
                 BuildPlaceholder();
             }
 
