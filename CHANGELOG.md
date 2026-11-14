@@ -5,6 +5,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen na
 ## [Unveröffentlicht]
 ### Hinzugefügt
 - GitHub Actions: Kern-Tests bei jedem Push; Cloud-Build für Android, Windows und WebGL per Knopfdruck (GameCI).
+- M7-Vorarbeit: Outfit-Textparser (DE/EN) + Start-Katalog mit ehrlichem Ersatz-Hinweis; 14 neue Tests.
 - `CiBuild.cs` (automatischer Build) und `docs/BUILD_IN_DER_CLOUD.md`.
 
 ## [0.1.0] – 2026-11-14 · M0 + M1 (vorbereiteter Unity-Projektstand)

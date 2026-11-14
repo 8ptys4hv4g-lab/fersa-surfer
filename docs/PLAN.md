@@ -16,7 +16,7 @@ Die Grundlage ist der Masterplan v1.0 (`archive/2026-11-14_MASTERPLAN_v1.0.md`).
 | M4 | Welt-Editor 2D: zeichnen, Pinsel, Rückgängig/Wiederholen, speichern | ⬜ | Editierbarer Weltplan | Opus / High |
 | M5 | Zeichnung → echte 3D-Welt | ⬜ | Straße, Häuser, Bäume und See werden 3D | Opus / High |
 | M6 | Outfit-Studio: Avatar, Katalog, Farben | ⬜ | Outfits wählen und im Lauf tragen | Sonnet / Medium |
-| M7 | Text-Outfits (DE/EN) | ⬜ | „Blonde Haare, rotes Kleid, braune Schuhe.“ funktioniert | Sonnet / Medium |
+| M7 | Text-Outfits (DE/EN) | 🟡 Parser + Katalog-Logik ✅ (getestet), 3D/UI fehlt | „Blonde Haare, rotes Kleid, braune Schuhe.“ funktioniert | Sonnet / Medium |
 | M8 | Android-/Tablet-Qualität, echte Testbuilds | ⬜ | Stabil auf Referenzgeräten | Opus / Medium |
 | M9 | iOS, macOS, Linux, ggf. Web | ⬜ | Pro Plattform gebaut und getestet | Opus / Medium |
 | M10 | Shop (nur Kosmetik), Analytics, Rechts-Check | ⬜ | Keine versehentlichen Käufe, faire Regeln | Opus / High |
