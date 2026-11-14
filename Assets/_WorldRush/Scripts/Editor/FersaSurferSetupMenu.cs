@@ -75,6 +75,26 @@ namespace WorldRush.EditorTools
             Debug.Log($"[FersaSurfer] {n} Figur(en) neu importiert (Animationen als Legacy). Jetzt ▶ drücken.");
         }
 
+        [MenuItem("Fersa Surfer/4. Ausgewählte Figur verwenden", priority = 4)]
+        public static void UseSelectedCharacter()
+        {
+            var go = Selection.activeObject as GameObject;
+            string path = go != null ? AssetDatabase.GetAssetPath(go) : null;
+            if (string.IsNullOrEmpty(path))
+            {
+                EditorUtility.DisplayDialog("Fersa Surfer", "Bitte zuerst im Project-Fenster eine Figur (Prefab oder Modell) anklicken.", "OK");
+                return;
+            }
+            const string folder = Root + "/Resources/Characters/Selected";
+            if (!AssetDatabase.IsValidFolder(folder)) AssetDatabase.CreateFolder(Root + "/Resources/Characters", "Selected");
+            foreach (var guid in AssetDatabase.FindAssets("", new[] { folder })) AssetDatabase.DeleteAsset(AssetDatabase.GUIDToAssetPath(guid));
+            string target = folder + "/" + System.IO.Path.GetFileName(path);
+            if (!AssetDatabase.CopyAsset(path, target)) { Debug.LogError("[FersaSurfer] Kopieren fehlgeschlagen: " + path); return; }
+            UnityEngine.PlayerPrefs.SetString("fs-character", go.name);
+            AssetDatabase.Refresh();
+            Debug.Log($"[FersaSurfer] Figur '{go.name}' wird jetzt im Spiel verwendet. ▶ drücken.");
+        }
+
         private static Material Mat(string name, Color color, float smoothness, Color? emission = null)
         {
             string path = $"{MaterialDir}/{name}.mat";

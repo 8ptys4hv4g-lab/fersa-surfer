@@ -37,3 +37,11 @@ Thumbs.db
 # Lokale Sicherungen
 *.zip
 *.bundle
+
+# Fremde 3D-Modelle (Asset Store / CC0-Downloads) nicht ins Repository – Lizenz erlaubt keine Weitergabe der Dateien
+Assets/_WorldRush/Resources/Characters/**
+!Assets/_WorldRush/Resources/Characters/HIER_3D_FIGUR_ABLEGEN.txt
+Assets/_WorldRush/Resources/Environment/**
+!Assets/_WorldRush/Resources/Environment/LIESMICH.txt
+Assets/HAON*/
+Assets/HAON*.meta

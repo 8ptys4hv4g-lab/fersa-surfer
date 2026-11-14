@@ -22,6 +22,8 @@ namespace WorldRush.Runtime
         // Echtes Modell
         private readonly GameObject _model;
         private readonly Animation _animation;
+        private readonly Animator _animator;
+        private readonly Dictionary<string, int> _states = new Dictionary<string, int>();
         private readonly Renderer[] _modelRenderers;
         private string _runClip, _idleClip, _jumpClip, _slideClip, _current;
 
@@ -54,7 +56,7 @@ namespace WorldRush.Runtime
         {
             var result = new List<GameObject>();
             var names = new HashSet<string>();
-            foreach (var path in new[] { "Characters", "Characters/FBX", "Characters/Models" })
+            foreach (var path in new[] { "Characters/Selected", "Characters", "Characters/FBX", "Characters/Models" })
                 foreach (var go in Resources.LoadAll<GameObject>(path))
                     if (go != null && go.GetComponentInChildren<Renderer>(true) != null && names.Add(go.name)) result.Add(go);
             result.Sort((a, b) =>
@@ -84,9 +86,11 @@ namespace WorldRush.Runtime
                     r.materials = r.materials; // eigene Instanzen, damit Outfit-Farben nur diese Figur betreffen
                 }
                 _animation = _model.GetComponentInChildren<Animation>();
+                _animator = _animation == null ? _model.GetComponentInChildren<Animator>() : null;
+                if (_animator != null) _animator.applyRootMotion = false; // Bewegung macht die Spiellogik
                 PickClips();
                 Debug.Log($"[FersaSurfer] 3D-Figur geladen: {prefab.name} · Renderer: {_modelRenderers.Length} · " +
-                          $"Animationen: {(_animation != null ? _animation.GetClipCount() : 0)} (Laufen: {_runClip ?? "-"}, Springen: {_jumpClip ?? "-"}, Stehen: {_idleClip ?? "-"})");
+                          $"Animationen: {(_animation != null ? _animation.GetClipCount() : _states.Count)} {(_animator != null ? "[Animator]" : "[Legacy]")} (Laufen: {_runClip ?? "-"}, Springen: {_jumpClip ?? "-"}, Stehen: {_idleClip ?? "-"})");
             }
             else
             {
@@ -156,6 +160,24 @@ namespace WorldRush.Runtime
 
         private void PickClips()
         {
+            if (_animator != null && _animator.runtimeAnimatorController != null)
+            {
+                // Animator (z. B. Asset-Store-Figuren): Zustände über die Clip-Namen finden
+                foreach (var clip in _animator.runtimeAnimatorController.animationClips)
+                {
+                    if (clip == null) continue;
+                    string full = clip.name, n = full.ToLowerInvariant();
+                    int hash = Animator.StringToHash(full);
+                    if (!_animator.HasState(0, hash)) continue;
+                    _states[full] = hash;
+                    if (_runClip == null && (n.Contains("run") || n.Contains("sprint"))) _runClip = full;
+                    else if (_idleClip == null && (n.Contains("idle") || n.Contains("wait") || n.Contains("stand"))) _idleClip = full;
+                    else if (_jumpClip == null && n.Contains("jump")) _jumpClip = full;
+                    else if (_slideClip == null && (n.Contains("slide") || n.Contains("roll") || n.Contains("crouch") || n.Contains("duck"))) _slideClip = full;
+                }
+                if (_runClip == null) foreach (var kv in _states) if (kv.Key.ToLowerInvariant().Contains("walk")) { _runClip = kv.Key; break; }
+                return;
+            }
             if (_animation == null) return;
             foreach (AnimationState state in _animation)
             {
@@ -172,7 +194,16 @@ namespace WorldRush.Runtime
 
         private void Play(string clip, float speed = 1f)
         {
-            if (_animation == null || clip == null) return;
+            if (clip == null) return;
+            if (_animator != null)
+            {
+                _animator.speed = speed;
+                if (_current == clip || !_states.TryGetValue(clip, out int hash)) return;
+                _animator.CrossFade(hash, 0.12f, 0);
+                _current = clip;
+                return;
+            }
+            if (_animation == null) return;
             var state = _animation[clip];
             if (state != null) state.speed = speed;
             if (_current == clip) return;
