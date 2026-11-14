@@ -33,3 +33,7 @@ secrets/
 # System
 .DS_Store
 Thumbs.db
+
+# Lokale Sicherungen
+*.zip
+*.bundle
