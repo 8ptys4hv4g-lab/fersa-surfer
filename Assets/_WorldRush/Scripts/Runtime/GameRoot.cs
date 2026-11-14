@@ -158,7 +158,7 @@ namespace WorldRush.Runtime
             bool menu = _session.State == GameState.Ready;
             Vector3 target = menu
                 ? new Vector3(2.6f, 2.3f, _session.PlayerZ + 4.6f)
-                : new Vector3(motor.LateralX * 0.55f, 4.3f + motor.FeetY * 0.35f, _session.PlayerZ - 7.6f);
+                : new Vector3(motor.LateralX * 0.6f, 3.6f + motor.FeetY * 0.35f, _session.PlayerZ - 6.6f);
             var cam = _camera.transform;
             cam.position = Vector3.Lerp(cam.position, target, 1f - Mathf.Exp(-(menu ? 3f : 9f) * Time.deltaTime));
             if (_shake > 0f)
@@ -171,7 +171,7 @@ namespace WorldRush.Runtime
                 : new Vector3(motor.LateralX * 0.4f, 1.1f, _session.PlayerZ + 8f);
             cam.rotation = Quaternion.Slerp(cam.rotation, Quaternion.LookRotation(look - cam.position), 1f - Mathf.Exp(-10f * Time.deltaTime));
             float speedT = Mathf.InverseLerp(_session.Config.StartSpeed, _session.Config.MaxSpeed, _session.Speed);
-            float fov = menu ? 50f : Mathf.Lerp(60f, 70f, speedT) + (motor.IsHovering ? 4f : 0f);
+            float fov = menu ? 50f : Mathf.Lerp(62f, 74f, speedT) + (motor.IsHovering ? 4f : 0f);
             _camera.fieldOfView = Mathf.Lerp(_camera.fieldOfView, fov, Time.deltaTime * 3f);
             if (_sun != null) _sun.transform.position = _player.position;
         }
@@ -381,9 +381,10 @@ namespace WorldRush.Runtime
             var lightGo = new GameObject("Sun");
             _sun = lightGo.AddComponent<Light>();
             _sun.type = LightType.Directional;
-            _sun.intensity = 1.15f;
-            _sun.color = new Color(1f, 0.9f, 0.82f);
+            _sun.intensity = 1.35f;
+            _sun.color = new Color(1f, 0.84f, 0.68f);
             _sun.shadows = LightShadows.Soft;
+            _sun.shadowStrength = 0.8f;
             lightGo.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
 
             RenderSettings.ambientMode = AmbientMode.Trilight;
@@ -420,7 +421,23 @@ namespace WorldRush.Runtime
                 colors.contrast.Override(8f);
                 var vignette = profile.Add<Vignette>(true);
                 vignette.intensity.Override(0.22f);
+                var tone = profile.Add<Tonemapping>(true);
+                tone.mode.Override(TonemappingMode.Neutral);
+                var dof = profile.Add<DepthOfField>(true);
+                dof.mode.Override(DepthOfFieldMode.Gaussian);
+                dof.gaussianStart.Override(45f);
+                dof.gaussianEnd.Override(150f);
+                dof.gaussianMaxRadius.Override(1.2f);
                 volume.profile = profile;
+            }
+
+            // Bildqualität: Kantenglättung, HDR, weitere und schärfere Schatten
+            if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
+            {
+                urp.msaaSampleCount = 4;
+                urp.supportsHDR = true;
+                urp.shadowDistance = 70f;
+                urp.shadowCascadeCount = 2;
             }
         }
 
@@ -559,6 +576,7 @@ namespace WorldRush.Runtime
                         float width = rnd.Range(10f, 15f);
                         var go = EnvironmentKit.Spawn(prefab, transform, new Vector3(side * (half + 7f + width * 0.5f), 0f, z + width * 0.5f), side < 0 ? -90f : 90f, width, false, 40f);
                         _scenery.Add(go.transform);
+                        StyleModel(go);
                         z += width + rnd.Range(0.3f, 1.5f);
                     }
                 }
@@ -576,6 +594,7 @@ namespace WorldRush.Runtime
                             var prefab = kit.Cars[rnd.Range(0, kit.Cars.Count)];
                             var go = EnvironmentKit.Spawn(prefab, transform, new Vector3(side * (half + 1.3f), 0f, z), rnd.NextFloat() < 0.5f ? 0f : 180f, 4.3f, false, 2.4f);
                             _scenery.Add(go.transform);
+                        StyleModel(go);
                         }
                         z += rnd.Range(6f, 14f);
                     }
@@ -592,7 +611,51 @@ namespace WorldRush.Runtime
                     var go = EnvironmentKit.Spawn(prefab, transform, new Vector3(side * (half + 3.6f + rnd.Range(0f, 1.6f)), 0.18f, i * (SceneryLoop / 40f) + rnd.Range(0f, 3f)),
                         side < 0 ? 90f : -90f, tall ? 4.5f : 0f, tall, tall ? 6f : 2.2f);
                     _scenery.Add(go.transform);
+                        StyleModel(go);
                 }
+            }
+        }
+
+        private readonly Dictionary<Material, Material> _styled = new Dictionary<Material, Material>();
+
+        /// <summary>Moderner Look für importierte Modelle: leuchtende Fenster, glänzender Lack, sanfter Glanz.</summary>
+        private void StyleModel(GameObject go)
+        {
+            foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+            {
+                var mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    var m = mats[i];
+                    if (m == null) continue;
+                    if (!_styled.TryGetValue(m, out var styled))
+                    {
+                        styled = new Material(m);
+                        string n = m.name.ToLowerInvariant();
+                        if (styled.HasProperty("_Smoothness")) styled.SetFloat("_Smoothness", 0.3f);
+                        if (n.Contains("window") || n.Contains("glass"))
+                        {
+                            styled.EnableKeyword("_EMISSION");
+                            var glow = (_styled.Count % 2 == 0) ? new Color(1f, 0.78f, 0.45f) : new Color(0.45f, 0.85f, 1f);
+                            styled.SetColor("_EmissionColor", glow * 1.4f);
+                            if (styled.HasProperty("_Smoothness")) styled.SetFloat("_Smoothness", 0.92f);
+                        }
+                        else if (n.Contains("light") || n.Contains("lamp") || n.Contains("neon") || n.Contains("sign"))
+                        {
+                            styled.EnableKeyword("_EMISSION");
+                            var baseColor = styled.HasProperty("_BaseColor") ? styled.GetColor("_BaseColor") : Color.white;
+                            styled.SetColor("_EmissionColor", baseColor * 1.8f);
+                        }
+                        else if (n.Contains("car") || n.Contains("paint") || n.Contains("body") || n.Contains("metal"))
+                        {
+                            if (styled.HasProperty("_Smoothness")) styled.SetFloat("_Smoothness", 0.78f);
+                            if (styled.HasProperty("_Metallic")) styled.SetFloat("_Metallic", 0.35f);
+                        }
+                        _styled[m] = styled;
+                    }
+                    mats[i] = styled;
+                }
+                r.sharedMaterials = mats;
             }
         }
 
@@ -750,7 +813,7 @@ namespace WorldRush.Runtime
 
         private void CreateMaterialsIfMissing()
         {
-            groundMaterial = groundMaterial ? groundMaterial : MaterialFactory.Create(new Color(0.11f, 0.09f, 0.22f), 0.55f);
+            groundMaterial = groundMaterial ? groundMaterial : MaterialFactory.Create(new Color(0.12f, 0.1f, 0.22f), 0.78f);
             laneLineMaterial = laneLineMaterial ? laneLineMaterial : MaterialFactory.Create(new Color(0.85f, 0.95f, 1f), 0.6f, NeonCyan * 1.8f);
             playerMaterial = playerMaterial ? playerMaterial : MaterialFactory.Create(NeonPink, 0.6f);
             hurdleMaterial = hurdleMaterial ? hurdleMaterial : MaterialFactory.Create(Sun, 0.6f, Sun * 0.9f);
