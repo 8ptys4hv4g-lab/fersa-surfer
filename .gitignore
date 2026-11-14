@@ -45,3 +45,7 @@ Assets/_WorldRush/Resources/Environment/**
 !Assets/_WorldRush/Resources/Environment/LIESMICH.txt
 Assets/HAON*/
 Assets/HAON*.meta
+
+# Alle fremden Pakete im Assets-Ordner (Asset Store, Downloads) – nur eigener Code wird versioniert
+/Assets/*
+!/Assets/_WorldRush/
