@@ -106,6 +106,9 @@ namespace WorldRush.EditorTools
             {
                 var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (go == null || go.GetComponentInChildren<SkinnedMeshRenderer>(true) == null) continue; // nur echte Figuren
+                if (go.GetComponentInChildren<Animator>(true) == null && go.GetComponentInChildren<Animation>(true) == null) continue; // ganze, animierbare Figur
+                string lowerName = go.name.ToLowerInvariant();
+                if (Has(lowerName, PartWords)) continue; // keine Einzelteile (Haare, Gesicht, Accessoires …)
                 if (!AssetDatabase.CopyAsset(path, folder + "/" + System.IO.Path.GetFileName(path))) continue;
                 first ??= go.name;
                 n++;
@@ -122,6 +125,7 @@ namespace WorldRush.EditorTools
             EditorUtility.DisplayDialog("Fersa Surfer", $"{n} Figur(en) übernommen.\nIm Startmenü mit < > auswählen, dann ▶.", "OK");
         }
 
+        private static readonly string[] PartWords = { "acc", "hair", "face", "prop", "guide", "preview", "dummy", "weapon", "costume0", "blendshape" };
         private static readonly string[] BuildingWords = { "building", "house", "shop", "store", "tower", "apartment", "office", "bank", "hospital", "school", "cafe", "restaurant", "hotel", "market", "skyscraper", "home", "station", "bakery", "cinema", "mall" };
         private static readonly string[] CarWords = { "car", "taxi", "bus", "truck", "van", "police", "ambulance", "vehicle", "suv", "pickup", "firetruck" };
         private static readonly string[] SkipWords = { "road", "street", "crossing", "sidewalk", "terrain", "ground", "tile", "floor", "plane", "base", "demo", "scene", "camera", "light probe" };
