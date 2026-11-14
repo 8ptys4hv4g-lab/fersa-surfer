@@ -114,18 +114,43 @@ namespace WorldRush.Runtime
             _shield.gameObject.SetActive(false);
         }
 
+        /// <summary>
+        /// Bringt das Modell auf die gewünschte Höhe und stellt die Füße auf den Boden.
+        /// Nutzt die Mesh-Daten statt Renderer.bounds, weil animierte Figuren beim Start oft falsche Bounds melden.
+        /// </summary>
         private static void FitToHeight(GameObject go, float height)
         {
-            var renderers = go.GetComponentsInChildren<Renderer>(true);
-            if (renderers.Length == 0) return;
-            var b = renderers[0].bounds;
-            foreach (var r in renderers) b.Encapsulate(r.bounds);
-            if (b.size.y < 0.01f) return;
-            go.transform.localScale *= height / b.size.y;
-            b = renderers[0].bounds;
-            foreach (var r in renderers) b.Encapsulate(r.bounds);
+            foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                smr.updateWhenOffscreen = true; // nie fälschlich ausblenden
+
+            if (!TryMeshBounds(go, out var b) || b.size.y < 0.0001f) { Debug.LogWarning("[FersaSurfer] Figur hat keine messbare Größe."); return; }
+            float factor = height / b.size.y;
+            if (float.IsNaN(factor) || float.IsInfinity(factor)) return;
+            go.transform.localScale *= factor;
+            TryMeshBounds(go, out b);
             var anchor = go.transform.parent != null ? go.transform.parent.position : Vector3.zero;
             go.transform.position += new Vector3(anchor.x - b.center.x, anchor.y - b.min.y, anchor.z - b.center.z);
+            Debug.Log($"[FersaSurfer] Figur skaliert mit Faktor {factor:0.###}, Höhe jetzt {b.size.y:0.00} m");
+        }
+
+        private static bool TryMeshBounds(GameObject go, out Bounds bounds)
+        {
+            bounds = default;
+            bool any = false;
+            void Add(Matrix4x4 m, Bounds local)
+            {
+                var c = local.center; var e = local.extents;
+                for (int i = 0; i < 8; i++)
+                {
+                    var p = m.MultiplyPoint3x4(c + new Vector3((i & 1) == 0 ? -e.x : e.x, (i & 2) == 0 ? -e.y : e.y, (i & 4) == 0 ? -e.z : e.z));
+                    if (!any) { bounds = new Bounds(p, Vector3.zero); any = true; } else bounds.Encapsulate(p);
+                }
+            }
+            foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (smr.sharedMesh != null) Add(smr.transform.localToWorldMatrix, smr.sharedMesh.bounds);
+            foreach (var mf in go.GetComponentsInChildren<MeshFilter>(true))
+                if (mf.sharedMesh != null) Add(mf.transform.localToWorldMatrix, mf.sharedMesh.bounds);
+            return any;
         }
 
         private void PickClips()
