@@ -135,7 +135,7 @@ namespace WorldRush.Runtime
             switch (s.State)
             {
                 case GameState.Ready:
-                    card.height = 420 * k;
+                    card.height = 480 * k;
                     card.y = Mathf.Max(safe.y + 80 * k, (Screen.height - card.height) * 0.5f);
                     GUI.Box(card, GUIContent.none, _panel);
                     var titleStyle = new GUIStyle(_big);
@@ -147,6 +147,13 @@ namespace WorldRush.Runtime
                     if (GUI.Button(new Rect(card.xMax - 160 * k, card.y + 194 * k, 140 * k, 44 * k), "Anziehen", _button))
                         _outfitFeedback = _root.ApplyOutfit(_outfitText);
                     GUI.Label(new Rect(card.x + 20 * k, card.y + 246 * k, card.width - 40 * k, 60 * k), string.Join("  ·  ", _outfitFeedback), new GUIStyle(_mid) { fontSize = (int)(16 * k), alignment = TextAnchor.UpperLeft });
+                    if (_root.CharacterCount > 1)
+                    {
+                        float ry = card.y + 300 * k;
+                        if (GUI.Button(new Rect(card.x + 20 * k, ry, 60 * k, 44 * k), "<", _button)) _outfitFeedback = _root.NextCharacter(-1) ?? _outfitFeedback;
+                        GUI.Label(new Rect(card.x + 90 * k, ry, card.width - 180 * k, 44 * k), "Figur: " + _root.CharacterName, new GUIStyle(_mid) { fontSize = (int)(22 * k) });
+                        if (GUI.Button(new Rect(card.xMax - 80 * k, ry, 60 * k, 44 * k), ">", _button)) _outfitFeedback = _root.NextCharacter(1) ?? _outfitFeedback;
+                    }
                     if (GUI.Button(new Rect(card.x + (card.width - 260 * k) * 0.5f, card.yMax - 90 * k, 260 * k, 66 * k), "Spielen", _button)) _root.StartRun();
                     break;
                 case GameState.Paused:

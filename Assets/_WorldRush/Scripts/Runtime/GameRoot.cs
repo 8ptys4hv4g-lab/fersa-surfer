@@ -536,11 +536,31 @@ namespace WorldRush.Runtime
             return tex;
         }
 
+        private List<GameObject> _models = new List<GameObject>();
+        private int _modelIndex;
+
+        public string CharacterName => _models.Count > 0 ? _models[_modelIndex].name : "Standard";
+        public int CharacterCount => _models.Count;
+
         private void BuildPlayer()
         {
             _player = new GameObject("Player").transform;
             _player.SetParent(transform);
-            _character = new CharacterView(_player);
+            _models = CharacterView.LoadModels();
+            string saved = PlayerPrefs.GetString("fs-character", "");
+            _modelIndex = Mathf.Max(0, _models.FindIndex(m => m.name == saved));
+            _character = new CharacterView(_player, _models.Count > 0 ? _models[_modelIndex] : null);
+        }
+
+        /// <summary>Nächste/vorherige Figur auswählen (Startmenü).</summary>
+        public List<string> NextCharacter(int direction)
+        {
+            if (_models.Count < 2) return null;
+            _modelIndex = (_modelIndex + direction + _models.Count) % _models.Count;
+            PlayerPrefs.SetString("fs-character", _models[_modelIndex].name);
+            Destroy(_character.Root.gameObject);
+            _character = new CharacterView(_player, _models[_modelIndex]);
+            return ApplyOutfit(outfit);
         }
 
         private void BuildCamera()

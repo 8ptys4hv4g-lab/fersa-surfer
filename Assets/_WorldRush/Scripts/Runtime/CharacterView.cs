@@ -49,14 +49,29 @@ namespace WorldRush.Runtime
             { OutfitSlot.Accessory, new[] { "hat", "cap", "helmet" } },
         };
 
-        public CharacterView(Transform parent)
+        /// <summary>Alle 3D-Figuren aus Resources/Characters (auch Unterordner), "Casual" zuerst.</summary>
+        public static List<GameObject> LoadModels()
+        {
+            var result = new List<GameObject>();
+            var names = new HashSet<string>();
+            foreach (var path in new[] { "Characters", "Characters/FBX", "Characters/Models" })
+                foreach (var go in Resources.LoadAll<GameObject>(path))
+                    if (go != null && go.GetComponentInChildren<Renderer>(true) != null && names.Add(go.name)) result.Add(go);
+            result.Sort((a, b) =>
+            {
+                int pa = a.name.ToLowerInvariant().Contains("casual") ? 0 : 1, pb = b.name.ToLowerInvariant().Contains("casual") ? 0 : 1;
+                return pa != pb ? pa.CompareTo(pb) : string.CompareOrdinal(a.name, b.name);
+            });
+            return result;
+        }
+
+        public CharacterView(Transform parent, GameObject prefab)
         {
             Root = new GameObject("Character").transform;
             Root.SetParent(parent, false);
             _body = new GameObject("Body").transform;
             _body.SetParent(Root, false);
 
-            var prefab = FindModel();
             if (prefab != null)
             {
                 _model = Object.Instantiate(prefab, _body, false);
@@ -97,14 +112,6 @@ namespace WorldRush.Runtime
                 ring.AddComponent<MeshRenderer>().sharedMaterial = shieldMat;
             }
             _shield.gameObject.SetActive(false);
-        }
-
-        private static GameObject FindModel()
-        {
-            var all = Resources.LoadAll<GameObject>("Characters");
-            foreach (var go in all)
-                if (go != null && go.GetComponentInChildren<Renderer>(true) != null) return go;
-            return null;
         }
 
         private static void FitToHeight(GameObject go, float height)

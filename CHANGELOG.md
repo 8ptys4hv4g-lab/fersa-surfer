@@ -4,6 +4,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen na
 
 ## [Unveröffentlicht]
 ### Hinzugefügt
+- Figurenauswahl im Startmenü (< >), Figuren auch aus Unterordnern; Menü „3. 3D-Figuren neu importieren“.
+### Hinzugefügt
 - Echte 3D-Figuren: Modell in `Assets/_WorldRush/Resources/Characters` ablegen → wird automatisch skaliert, animiert (Laufen/Springen/Idle) und nach Outfit-Text eingefärbt. Ohne Modell bleibt die Platzhalter-Figur.
 
 ## [0.2.0] – 2026-11-14

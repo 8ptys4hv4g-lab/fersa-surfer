@@ -63,6 +63,18 @@ namespace WorldRush.EditorTools
             Debug.Log("[FersaSurfer] Build-Einstellungen gesetzt: IL2CPP, Code-Stripping, nur HTTPS, Android ARM64.");
         }
 
+        [MenuItem("Fersa Surfer/3. 3D-Figuren neu importieren", priority = 3)]
+        public static void ReimportCharacters()
+        {
+            int n = 0;
+            foreach (var guid in AssetDatabase.FindAssets("t:Model", new[] { Root + "/Resources/Characters" }))
+            {
+                AssetDatabase.ImportAsset(AssetDatabase.GUIDToAssetPath(guid), ImportAssetOptions.ForceUpdate);
+                n++;
+            }
+            Debug.Log($"[FersaSurfer] {n} Figur(en) neu importiert (Animationen als Legacy). Jetzt ▶ drücken.");
+        }
+
         private static Material Mat(string name, Color color, float smoothness, Color? emission = null)
         {
             string path = $"{MaterialDir}/{name}.mat";
