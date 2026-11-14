@@ -863,8 +863,8 @@ namespace WorldRush.Runtime
             if (m == null || GraphicsSettings.currentRenderPipeline == null) return m;
             var shader = m.shader;
             string name = shader != null ? shader.name : "";
-            bool ok = shader != null && shader.isSupported &&
-                      (name.StartsWith("Universal Render Pipeline/") || name.StartsWith("Shader Graphs/") || name.StartsWith("Sprites/") || name.StartsWith("UI/"));
+            // Nur echte URP-Shader behalten. Shader-Graph-Materialien aus Paketen sind oft für die alte Pipeline gebaut (= pink).
+            bool ok = shader != null && shader.isSupported && name.StartsWith("Universal Render Pipeline/") && !name.Contains("Error");
             if (ok) return m;
             if (Converted.TryGetValue(m, out var done)) return done;
 
@@ -872,9 +872,25 @@ namespace WorldRush.Runtime
             Texture tex = null;
             foreach (var prop in new[] { "_BaseMap", "_MainTex", "_BaseColorMap", "_Albedo", "_Diffuse", "_MainTexture" })
                 if (m.HasProperty(prop) && m.GetTexture(prop) != null) { tex = m.GetTexture(prop); break; }
+            if (tex == null)
+                foreach (var prop in m.GetTexturePropertyNames())
+                {
+                    string lp = prop.ToLowerInvariant();
+                    if (lp.Contains("normal") || lp.Contains("bump") || lp.Contains("mask") || lp.Contains("rough") || lp.Contains("metal") || lp.Contains("occlusion") || lp.Contains("emission")) continue;
+                    var t = m.GetTexture(prop);
+                    if (t != null) { tex = t; break; }
+                }
             Color color = Color.white;
+            bool foundColor = false;
             foreach (var prop in new[] { "_BaseColor", "_Color", "_MainColor", "_Tint" })
-                if (m.HasProperty(prop)) { color = m.GetColor(prop); break; }
+                if (m.HasProperty(prop)) { color = m.GetColor(prop); foundColor = true; break; }
+            if (!foundColor)
+                foreach (var prop in m.GetPropertyNames(MaterialPropertyType.Vector))
+                {
+                    string lp = prop.ToLowerInvariant();
+                    if (lp.Contains("color") || lp.Contains("tint") || lp.Contains("albedo")) { color = m.GetColor(prop); break; }
+                }
+            if (color.a < 0.05f) color.a = 1f;
             if (tex != null) { lit.SetTexture("_BaseMap", tex); lit.mainTextureScale = m.mainTextureScale; }
             lit.SetColor("_BaseColor", color);
             lit.SetFloat("_Smoothness", 0.25f);
