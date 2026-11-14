@@ -1,0 +1,122 @@
+using System;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
+
+namespace WorldRush.Core
+{
+    /// <summary>Spielstand. Klein gehalten; jedes Feld hat einen sicheren Standardwert.</summary>
+    public sealed class SaveData
+    {
+        public const int CurrentSchemaVersion = 1;
+
+        public int SchemaVersion = CurrentSchemaVersion;
+        public int HighScore;
+        public int TotalCoins;
+        public int RunsPlayed;
+
+        public string ToJson()
+        {
+            var sb = new StringBuilder();
+            sb.Append('{');
+            sb.Append("\"schemaVersion\":").Append(SchemaVersion.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"highScore\":").Append(HighScore.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"totalCoins\":").Append(TotalCoins.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"runsPlayed\":").Append(RunsPlayed.ToString(CultureInfo.InvariantCulture));
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        /// <summary>Liest einen Spielstand. Gibt false zurück, wenn die Datei kaputt oder unbekannt ist.</summary>
+        public static bool TryParse(string json, out SaveData data)
+        {
+            data = null;
+            if (string.IsNullOrWhiteSpace(json)) return false;
+            string trimmed = json.Trim();
+            if (!trimmed.StartsWith("{") || !trimmed.EndsWith("}")) return false;
+            if (!TryReadInt(trimmed, "schemaVersion", out int version)) return false;
+            if (version < 1 || version > CurrentSchemaVersion) return false;
+
+            data = new SaveData { SchemaVersion = CurrentSchemaVersion };
+            data.HighScore = ReadNonNegative(trimmed, "highScore");
+            data.TotalCoins = ReadNonNegative(trimmed, "totalCoins");
+            data.RunsPlayed = ReadNonNegative(trimmed, "runsPlayed");
+            return true;
+        }
+
+        private static int ReadNonNegative(string json, string key) =>
+            TryReadInt(json, key, out int value) ? Math.Max(0, value) : 0;
+
+        private static bool TryReadInt(string json, string key, out int value)
+        {
+            value = 0;
+            var match = Regex.Match(json, "\"" + Regex.Escape(key) + "\"\\s*:\\s*(-?\\d{1,10})\\s*[,}]");
+            return match.Success && int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+        }
+    }
+
+    /// <summary>
+    /// Speichert lokal als JSON. Schreibt zuerst in eine Temp-Datei und tauscht dann aus,
+    /// damit ein Absturz beim Speichern nicht den alten Spielstand zerstört. Eine Sicherung (.bak) bleibt erhalten.
+    /// </summary>
+    public sealed class LocalSaveRepository
+    {
+        public LocalSaveRepository(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath)) throw new ArgumentException("filePath required");
+            FilePath = filePath;
+        }
+
+        public string FilePath { get; }
+        public string BackupPath => FilePath + ".bak";
+        private string TempPath => FilePath + ".tmp";
+
+        public SaveData Load()
+        {
+            if (TryLoad(FilePath, out var data)) return data;
+            if (TryLoad(BackupPath, out data)) return data;
+            return new SaveData();
+        }
+
+        public void Save(SaveData data)
+        {
+            if (data == null) throw new ArgumentNullException(nameof(data));
+            string dir = Path.GetDirectoryName(FilePath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+            File.WriteAllText(TempPath, data.ToJson(), new UTF8Encoding(false));
+
+            if (File.Exists(FilePath))
+            {
+                try
+                {
+                    File.Replace(TempPath, FilePath, BackupPath);
+                    return;
+                }
+                catch (PlatformNotSupportedException) { }
+                catch (IOException) { }
+
+                File.Copy(FilePath, BackupPath, true);
+                File.Copy(TempPath, FilePath, true);
+                File.Delete(TempPath);
+            }
+            else
+            {
+                File.Move(TempPath, FilePath);
+            }
+        }
+
+        private static bool TryLoad(string path, out SaveData data)
+        {
+            data = null;
+            try
+            {
+                if (!File.Exists(path)) return false;
+                return SaveData.TryParse(File.ReadAllText(path), out data);
+            }
+            catch (IOException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
+        }
+    }
+}

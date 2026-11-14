@@ -1,0 +1,84 @@
+using System.Collections.Generic;
+using System.IO;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using WorldRush.Core;
+using WorldRush.Runtime;
+
+namespace WorldRush.EditorTools
+{
+    /// <summary>
+    /// Menü "Fersa Surfer → Demo-Szene erstellen": Unity selbst erzeugt Szene und Materialien
+    /// (keine handgeschriebenen .unity/.mat-Dateien), trägt die Szene in die Build-Liste ein
+    /// und setzt Produktname und sichere Build-Einstellungen.
+    /// </summary>
+    public static class FersaSurferSetupMenu
+    {
+        private const string Root = "Assets/_WorldRush";
+        private const string ScenePath = Root + "/Scenes/RunnerDemo.unity";
+        private const string MaterialDir = Root + "/Art/Materials";
+
+        [MenuItem("Fersa Surfer/1. Demo-Szene erstellen", priority = 1)]
+        public static void CreateDemoScene()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
+            Directory.CreateDirectory(MaterialDir);
+
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var go = new GameObject("FersaSurfer");
+            var root = go.AddComponent<GameRoot>();
+            root.groundMaterial = Mat("Ground", new Color(0.22f, 0.22f, 0.32f), 0.4f);
+            root.laneLineMaterial = Mat("LaneLine", new Color(0.9f, 0.95f, 1f), 0.2f, new Color(0.4f, 0.6f, 1f));
+            root.playerMaterial = Mat("Player", new Color(1f, 0.45f, 0.35f), 0.6f);
+            root.hurdleMaterial = Mat("Hurdle", new Color(1f, 0.8f, 0.2f), 0.5f);
+            root.overheadMaterial = Mat("Overhead", new Color(0.3f, 0.85f, 1f), 0.5f);
+            root.blockMaterial = Mat("Block", new Color(0.95f, 0.3f, 0.55f), 0.5f);
+            root.coinMaterial = Mat("Coin", new Color(1f, 0.85f, 0.25f), 0.9f, new Color(0.6f, 0.45f, 0f));
+            root.buildingMaterial = Mat("Building", Color.white, 0.3f);
+
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            AddSceneToBuild(ScenePath);
+            ApplyPlayerSettings();
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[FersaSurfer] Szene erstellt: {ScenePath}. Jetzt oben auf ▶ (Play) drücken.");
+        }
+
+        [MenuItem("Fersa Surfer/2. Sichere Build-Einstellungen setzen", priority = 2)]
+        public static void ApplyPlayerSettings()
+        {
+            PlayerSettings.productName = ProductInfo.DisplayName;
+            PlayerSettings.bundleVersion = ProductInfo.Version;
+
+            // IL2CPP statt Mono: nativer Code, schwerer zu manipulieren und schneller.
+            // Hinweis: benötigt die IL2CPP-Module im Unity Hub.
+            foreach (var target in new[] { BuildTargetGroup.Android, BuildTargetGroup.iOS, BuildTargetGroup.Standalone })
+            {
+                PlayerSettings.SetScriptingBackend(UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(target), ScriptingImplementation.IL2CPP);
+                PlayerSettings.SetManagedStrippingLevel(UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(target), ManagedStrippingLevel.Medium);
+            }
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.NotAllowed;
+            Debug.Log("[FersaSurfer] Build-Einstellungen gesetzt: IL2CPP, Code-Stripping, nur HTTPS, Android ARM64.");
+        }
+
+        private static Material Mat(string name, Color color, float smoothness, Color? emission = null)
+        {
+            string path = $"{MaterialDir}/{name}.mat";
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (existing != null) return existing;
+            var m = MaterialFactory.Create(color, smoothness, emission);
+            AssetDatabase.CreateAsset(m, path);
+            return m;
+        }
+
+        private static void AddSceneToBuild(string path)
+        {
+            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            if (scenes.Exists(s => s.path == path)) return;
+            scenes.Insert(0, new EditorBuildSettingsScene(path, true));
+            EditorBuildSettings.scenes = scenes.ToArray();
+        }
+    }
+}
