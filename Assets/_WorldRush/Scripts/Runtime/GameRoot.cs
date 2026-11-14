@@ -453,6 +453,8 @@ namespace WorldRush.Runtime
             _stripe = MaterialFactory.Create(new Color(0.14f, 0.12f, 0.23f), 0.3f);
             var lawn = MaterialFactory.Create(new Color(0.24f, 0.17f, 0.48f), 0.1f);
             var edge = MaterialFactory.Create(NeonPink, 0.6f, NeonPink * 2.2f);
+            var parking = MaterialFactory.Create(new Color(0.16f, 0.14f, 0.27f), 0.4f);
+            var sidewalk = MaterialFactory.Create(new Color(0.62f, 0.6f, 0.7f), 0.25f);
 
             for (int i = 0; i < TileCount; i++)
             {
@@ -464,7 +466,11 @@ namespace WorldRush.Runtime
                     for (int dash = 0; dash < 4; dash++)
                         Box(tile, laneLineMaterial, new Vector3((line - 0.5f) * cfg.LaneWidth, 0.01f, -TileLength * 0.5f + 2.5f + dash * 5f), new Vector3(0.1f, 0.02f, 2.8f));
                 for (int s = -1; s <= 1; s += 2)
+                {
                     Box(tile, edge, new Vector3(s * trackWidth * 0.5f, 0.02f, 0f), new Vector3(0.12f, 0.04f, TileLength));
+                    Box(tile, parking, new Vector3(s * (trackWidth * 0.5f + 1.3f), -0.03f, 0f), new Vector3(2.6f, 0.1f, TileLength));
+                    Box(tile, sidewalk, new Vector3(s * (trackWidth * 0.5f + 4.6f), 0.06f, 0f), new Vector3(4f, 0.24f, TileLength));
+                }
                 _groundTiles.Add(tile);
             }
 
@@ -487,6 +493,8 @@ namespace WorldRush.Runtime
                 }
             }
 
+            BuildKitScenery(trackWidth, rnd);
+
             // Bäume mit Pastellkronen und Neon-Laternen am Straßenrand
             var trunk = MaterialFactory.Create(new Color(0.36f, 0.23f, 0.18f), 0.2f);
             var crowns = new[] { new Color(1f, 0.48f, 0.78f), new Color(0.49f, 1f, 0.69f), new Color(1f, 0.82f, 0.48f), new Color(0.61f, 0.55f, 1f) };
@@ -501,7 +509,7 @@ namespace WorldRush.Runtime
                     var crown = MakePrimitive(PrimitiveType.Sphere, "Crown", tree, MaterialFactory.Create(crowns[rnd.Range(0, crowns.Length)], 0.3f));
                     crown.transform.localPosition = new Vector3(0, 2.2f, 0);
                     crown.transform.localScale = Vector3.one * rnd.Range(1.8f, 2.6f);
-                    tree.position = new Vector3(side * (trackWidth * 0.5f + 2.5f + rnd.Range(0f, 2f)), 0.8f, i * (SceneryLoop / 30f));
+                    tree.position = new Vector3(side * (trackWidth * 0.5f + 5.6f + rnd.Range(0f, 0.6f)), 0.98f, i * (SceneryLoop / 30f));
                     _scenery.Add(tree);
                 }
                 if (i % 3 == 0)
@@ -512,9 +520,68 @@ namespace WorldRush.Runtime
                         lamp.SetParent(transform);
                         Box(lamp, laneLineMaterial, new Vector3(0, 2f, 0), new Vector3(0.12f, 4f, 0.12f));
                         Box(lamp, lampMat, new Vector3(-side * 0.5f, 4f, 0), new Vector3(1.1f, 0.14f, 0.3f));
-                        lamp.position = new Vector3(side * (trackWidth * 0.5f + 0.8f), 0f, i * (SceneryLoop / 30f) + 3f);
+                        lamp.position = new Vector3(side * (trackWidth * 0.5f + 2.9f), 0.18f, i * (SceneryLoop / 30f) + 3f);
                         _scenery.Add(lamp);
                     }
+                }
+            }
+        }
+
+        private void BuildKitScenery(float trackWidth, DeterministicRandom rnd)
+        {
+            var kit = new EnvironmentKit();
+            Debug.Log($"[FersaSurfer] Stadt-Modelle: {kit.Buildings.Count} Gebäude, {kit.Props.Count} Deko, {kit.Cars.Count} Autos");
+            if (!kit.HasAny) return;
+            float half = trackWidth * 0.5f;
+
+            if (kit.Buildings.Count > 0)
+            {
+                // Neon-Hochhäuser werden zur Skyline im Hintergrund
+                foreach (var t in _scenery)
+                    if (t.name == "Building") t.position += new Vector3(Mathf.Sign(t.position.x) * 26f, 0f, 0f);
+
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    float z = rnd.Range(0f, 4f);
+                    while (z < SceneryLoop)
+                    {
+                        var prefab = kit.Buildings[rnd.Range(0, kit.Buildings.Count)];
+                        float width = rnd.Range(10f, 15f);
+                        var go = EnvironmentKit.Spawn(prefab, transform, new Vector3(side * (half + 7f + width * 0.5f), 0f, z + width * 0.5f), side < 0 ? 90f : -90f, width, false, 40f);
+                        _scenery.Add(go.transform);
+                        z += width + rnd.Range(0.3f, 1.5f);
+                    }
+                }
+            }
+
+            if (kit.Cars.Count > 0)
+            {
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    float z = rnd.Range(2f, 10f);
+                    while (z < SceneryLoop)
+                    {
+                        if (rnd.NextFloat() < 0.7f)
+                        {
+                            var prefab = kit.Cars[rnd.Range(0, kit.Cars.Count)];
+                            var go = EnvironmentKit.Spawn(prefab, transform, new Vector3(side * (half + 1.3f), 0f, z), rnd.NextFloat() < 0.5f ? 0f : 180f, 4.3f, false, 2.4f);
+                            _scenery.Add(go.transform);
+                        }
+                        z += rnd.Range(6f, 14f);
+                    }
+                }
+            }
+
+            if (kit.Props.Count > 0)
+            {
+                for (int i = 0; i < 40; i++)
+                {
+                    int side = i % 2 == 0 ? -1 : 1;
+                    var prefab = kit.Props[rnd.Range(0, kit.Props.Count)];
+                    bool tall = EnvironmentKit.NameHas(prefab, "light", "lamp", "tree", "traffic", "sign", "pole");
+                    var go = EnvironmentKit.Spawn(prefab, transform, new Vector3(side * (half + 3.6f + rnd.Range(0f, 1.6f)), 0.18f, i * (SceneryLoop / 40f) + rnd.Range(0f, 3f)),
+                        side < 0 ? 90f : -90f, tall ? 4.5f : 0f, tall, tall ? 6f : 2.2f);
+                    _scenery.Add(go.transform);
                 }
             }
         }

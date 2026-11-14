@@ -1,0 +1,1 @@
+Hier liegen die Stadt-Modelle (FBX). Wird per PowerShell-Befehl aus dem Downtown City MegaKit / Car Pack (CC0, Quaternius) befüllt.

@@ -133,7 +133,7 @@ namespace WorldRush.Runtime
             Debug.Log($"[FersaSurfer] Figur skaliert mit Faktor {factor:0.###}, Höhe jetzt {b.size.y:0.00} m");
         }
 
-        private static bool TryMeshBounds(GameObject go, out Bounds bounds)
+        internal static bool TryMeshBounds(GameObject go, out Bounds bounds)
         {
             var points = new List<Vector3>();
             foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>(true))
