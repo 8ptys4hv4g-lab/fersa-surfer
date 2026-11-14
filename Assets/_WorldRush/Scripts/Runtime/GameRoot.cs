@@ -126,7 +126,8 @@ namespace WorldRush.Runtime
             switch (_session.State)
             {
                 case GameState.Ready:
-                    if (_input.ConfirmPressed || commands.Count > 0) _session.Start();
+                    // Nicht starten, während jemand ins Outfit-Feld tippt.
+                    if (GUIUtility.keyboardControl == 0 && (_input.ConfirmPressed || commands.Count > 0)) _session.Start();
                     break;
                 case GameState.GameOver:
                     if (_input.ConfirmPressed) Restart();

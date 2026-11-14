@@ -38,7 +38,7 @@ namespace WorldRush.Runtime
 
         private void EnsureStyles()
         {
-            _scale = Mathf.Max(1f, Mathf.Min(Screen.width, Screen.height) / 720f);
+            _scale = Mathf.Clamp(Mathf.Min(Screen.width / 1280f, Screen.height / 720f), 0.55f, 3f);
             if (_big != null) return;
             _panelTex = Solid(new Color(0.1f, 0.05f, 0.23f, 0.82f));
             _buttonTex = Solid(new Color(1f, 0.82f, 0.25f, 1f));
@@ -131,11 +131,12 @@ namespace WorldRush.Runtime
 
             // Menüs
             float cw = Mathf.Min(Screen.width - 2 * pad, 560 * k);
-            var card = new Rect((Screen.width - cw) * 0.5f, Screen.height * 0.16f, cw, 0);
+            var card = new Rect((Screen.width - cw) * 0.5f, 0, cw, 0);
             switch (s.State)
             {
                 case GameState.Ready:
                     card.height = 420 * k;
+                    card.y = Mathf.Max(safe.y + 80 * k, (Screen.height - card.height) * 0.5f);
                     GUI.Box(card, GUIContent.none, _panel);
                     var titleStyle = new GUIStyle(_big);
                     titleStyle.normal.textColor = GameRoot.NeonCyan;
@@ -150,12 +151,14 @@ namespace WorldRush.Runtime
                     break;
                 case GameState.Paused:
                     card.height = 220 * k;
+                    card.y = Mathf.Max(safe.y + 80 * k, (Screen.height - card.height) * 0.5f);
                     GUI.Box(card, GUIContent.none, _panel);
                     GUI.Label(new Rect(card.x, card.y + 20 * k, card.width, 70 * k), "Pause", _big);
                     if (GUI.Button(new Rect(card.x + (card.width - 240 * k) * 0.5f, card.yMax - 90 * k, 240 * k, 64 * k), "Weiter", _button)) _root.TogglePause();
                     break;
                 case GameState.GameOver:
                     card.height = 280 * k;
+                    card.y = Mathf.Max(safe.y + 80 * k, (Screen.height - card.height) * 0.5f);
                     GUI.Box(card, GUIContent.none, _panel);
                     GUI.Label(new Rect(card.x, card.y + 20 * k, card.width, 70 * k), s.Score.IsNewHighScore ? "Neuer Bestwert!" : "Autsch!", _big);
                     GUI.Label(new Rect(card.x, card.y + 100 * k, card.width, 40 * k), $"{(int)s.Score.Distance} m  ·  {s.Score.Coins} Münzen  ·  {s.Score.Score} Punkte", _mid);

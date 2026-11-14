@@ -120,7 +120,7 @@ namespace WorldRush.Runtime
 
             foreach (var choice in matched)
             {
-                if (choice.Item == null) { feedback.Add("Nicht im Katalog: " + choice.Wish.Type); continue; }
+                if (choice.Item == null) { feedback.Add("Nicht im Katalog: " + SlotName(choice.Wish.Slot)); continue; }
                 Material target = choice.Wish.Slot switch
                 {
                     OutfitSlot.Hair => _hair,
@@ -133,11 +133,30 @@ namespace WorldRush.Runtime
                 if (choice.Wish.Slot == OutfitSlot.Accessory) _cap.SetActive(true);
                 if (choice.Color != null && Palette.TryGetValue(choice.Color, out var color)) SetColor(target, color);
                 string note = choice.Quality == MatchQuality.Exact ? "" : " (Ersatz)";
-                feedback.Add($"{choice.Wish.Slot}: {choice.Color ?? "-"}{note}");
+                feedback.Add($"{SlotName(choice.Wish.Slot)}: {ColorName(choice.Color)}{note}");
             }
             foreach (var w in parsed.UnknownWords) if (feedback.Count < 6) feedback.Add("Unbekannt: " + w);
             return feedback;
         }
+
+        private static string SlotName(OutfitSlot slot) => slot switch
+        {
+            OutfitSlot.Hair => "Haare",
+            OutfitSlot.Dress => "Kleid",
+            OutfitSlot.Top => "Oberteil",
+            OutfitSlot.Bottom => "Hose/Rock",
+            OutfitSlot.Shoes => "Schuhe",
+            _ => "Mütze"
+        };
+
+        private static readonly Dictionary<string, string> GermanColors = new Dictionary<string, string>
+        {
+            { "red", "rot" }, { "blue", "blau" }, { "green", "grün" }, { "yellow", "gelb" }, { "black", "schwarz" },
+            { "white", "weiß" }, { "brown", "braun" }, { "blonde", "blond" }, { "pink", "pink" }, { "purple", "lila" },
+            { "orange", "orange" }, { "grey", "grau" }, { "silver", "silber" }, { "gold", "gold" }, { "beige", "beige" }
+        };
+
+        private static string ColorName(string id) => id != null && GermanColors.TryGetValue(id, out var de) ? de : "-";
 
         public void Animate(RunnerMotor motor, bool running, bool hovering, bool shield, float speed, float dt)
         {
