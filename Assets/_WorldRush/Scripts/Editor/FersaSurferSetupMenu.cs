@@ -75,24 +75,51 @@ namespace WorldRush.EditorTools
             Debug.Log($"[FersaSurfer] {n} Figur(en) neu importiert (Animationen als Legacy). Jetzt ▶ drücken.");
         }
 
-        [MenuItem("Fersa Surfer/4. Ausgewählte Figur verwenden", priority = 4)]
-        public static void UseSelectedCharacter()
+        [MenuItem("Fersa Surfer/4. Figuren übernehmen (HAON & Co.)", priority = 4)]
+        public static void UseCharacters()
         {
-            var go = Selection.activeObject as GameObject;
-            string path = go != null ? AssetDatabase.GetAssetPath(go) : null;
-            if (string.IsNullOrEmpty(path))
+            if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog("Fersa Surfer", "Bitte zuerst das Spiel stoppen (■).", "OK"); return; }
+
+            // 1) Ausgewählte Figur/Ordner, sonst 2) automatisch alle Figuren-Prefabs aus Paketen mit "haon"/"character"/"chara" im Pfad
+            var candidates = new List<string>();
+            string sel = Selection.activeObject != null ? AssetDatabase.GetAssetPath(Selection.activeObject) : null;
+            if (!string.IsNullOrEmpty(sel) && !sel.StartsWith(Root))
             {
-                EditorUtility.DisplayDialog("Fersa Surfer", "Bitte zuerst im Project-Fenster eine Figur (Prefab oder Modell) anklicken.", "OK");
+                if (AssetDatabase.IsValidFolder(sel)) foreach (var g in AssetDatabase.FindAssets("t:Prefab", new[] { sel })) candidates.Add(AssetDatabase.GUIDToAssetPath(g));
+                else candidates.Add(sel);
+            }
+            if (candidates.Count == 0)
+                foreach (var g in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" }))
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(g), lower = path.ToLowerInvariant();
+                    if (path.StartsWith(Root)) continue;
+                    if (lower.Contains("haon") || lower.Contains("/character") || lower.Contains("chara")) candidates.Add(path);
+                }
+
+            const string folder = Root + "/Resources/Characters/Selected";
+            if (AssetDatabase.IsValidFolder(folder)) AssetDatabase.DeleteAsset(folder);
+            AssetDatabase.CreateFolder(Root + "/Resources/Characters", "Selected");
+
+            int n = 0;
+            string first = null;
+            foreach (var path in candidates)
+            {
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (go == null || go.GetComponentInChildren<SkinnedMeshRenderer>(true) == null) continue; // nur echte Figuren
+                if (!AssetDatabase.CopyAsset(path, folder + "/" + System.IO.Path.GetFileName(path))) continue;
+                first ??= go.name;
+                n++;
+                if (n >= 30) break;
+            }
+            AssetDatabase.Refresh();
+            if (n == 0)
+            {
+                EditorUtility.DisplayDialog("Fersa Surfer", "Keine Figuren gefunden. Bitte zuerst 'HAON SD series Free bundle' über Window → Package Manager → My Assets importieren.", "OK");
                 return;
             }
-            const string folder = Root + "/Resources/Characters/Selected";
-            if (!AssetDatabase.IsValidFolder(folder)) AssetDatabase.CreateFolder(Root + "/Resources/Characters", "Selected");
-            foreach (var guid in AssetDatabase.FindAssets("", new[] { folder })) AssetDatabase.DeleteAsset(AssetDatabase.GUIDToAssetPath(guid));
-            string target = folder + "/" + System.IO.Path.GetFileName(path);
-            if (!AssetDatabase.CopyAsset(path, target)) { Debug.LogError("[FersaSurfer] Kopieren fehlgeschlagen: " + path); return; }
-            UnityEngine.PlayerPrefs.SetString("fs-character", go.name);
-            AssetDatabase.Refresh();
-            Debug.Log($"[FersaSurfer] Figur '{go.name}' wird jetzt im Spiel verwendet. ▶ drücken.");
+            UnityEngine.PlayerPrefs.SetString("fs-character", first);
+            Debug.Log($"[FersaSurfer] {n} Figur(en) übernommen. Im Startmenü mit < > auswählen.");
+            EditorUtility.DisplayDialog("Fersa Surfer", $"{n} Figur(en) übernommen.\nIm Startmenü mit < > auswählen, dann ▶.", "OK");
         }
 
         private static readonly string[] BuildingWords = { "building", "house", "shop", "store", "tower", "apartment", "office", "bank", "hospital", "school", "cafe", "restaurant", "hotel", "market", "skyscraper", "home", "station", "bakery", "cinema", "mall" };
