@@ -23,6 +23,8 @@ namespace WorldRush.Core
         public float FeetY { get; private set; }
         public bool IsJumping { get; private set; }
         public bool IsSliding { get; private set; }
+        /// <summary>Auf dem Surfboard: schwebt über allen Hindernissen.</summary>
+        public bool IsHovering { get; private set; }
 
         public float Height => IsSliding ? _config.SlidingHeight : _config.StandingHeight;
         public float TopY => FeetY + Height;
@@ -34,12 +36,24 @@ namespace WorldRush.Core
             FeetY = 0f;
             IsJumping = false;
             IsSliding = false;
+            IsHovering = false;
             _jumpTime = 0f;
             _slideTime = 0f;
         }
 
+        public void SetHovering(bool hovering)
+        {
+            IsHovering = hovering;
+            if (hovering)
+            {
+                IsJumping = false;
+                IsSliding = false;
+            }
+        }
+
         public void Apply(RunnerCommand command)
         {
+            if (IsHovering && (command == RunnerCommand.Jump || command == RunnerCommand.Slide)) return;
             switch (command)
             {
                 case RunnerCommand.MoveLeft:
@@ -49,7 +63,7 @@ namespace WorldRush.Core
                     if (TargetLane < Lanes.Right) TargetLane++;
                     break;
                 case RunnerCommand.Jump:
-                    if (!IsJumping)
+                    if (!IsJumping && FeetY <= 0f)
                     {
                         IsSliding = false;
                         _slideTime = 0f;
@@ -79,8 +93,12 @@ namespace WorldRush.Core
             float diff = targetX - LateralX;
             LateralX = Math.Abs(diff) <= maxStep ? targetX : LateralX + Math.Sign(diff) * maxStep;
 
+            if (IsHovering)
+            {
+                FeetY += (_config.BoardHeight - FeetY) * Math.Min(1f, dt * 6f);
+            }
             // Sprung als Parabel: y = 4h * t * (1 - t), t = 0..1
-            if (IsJumping)
+            else if (IsJumping)
             {
                 _jumpTime += dt;
                 float t = _jumpTime / _config.JumpDuration;
@@ -93,6 +111,10 @@ namespace WorldRush.Core
                 {
                     FeetY = 4f * _config.JumpHeight * t * (1f - t);
                 }
+            }
+            else if (FeetY > 0f)
+            {
+                FeetY = Math.Max(0f, FeetY - _config.FallSpeed * dt);
             }
 
             if (IsSliding)

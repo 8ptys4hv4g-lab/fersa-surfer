@@ -3,6 +3,13 @@
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
+
+## [0.2.0] – 2026-11-14
+### Bestätigt
+- M0 + M1 laufen in Unity 6.6 unter Windows.
+### Hinzugefügt
+- Kern: Power-ups (Surfboard, Magnet, Schild, 2×), Combo-Multiplikator, Münzspur in der Luft, Schonzeit nach Landung/Schild; 10 neue Tests (105 gesamt).
+- Unity: Neon-Garden-City-Look (leuchtende Fenster, Laternen, Bloom, Farbkorrektur, Vignette), Tag-Nacht-Himmel, niedliche Figur mit Outfit aus Text, Partikel, synthetische Sounds und Musik, neues HUD.
 ### Geändert
 - Input-System-Paket entfernt (Version passte nicht zu Unity 6.6, Kompilierfehler). Steuerung läuft über den eingebauten Input Manager (Tastatur, Maus, Touch).
 

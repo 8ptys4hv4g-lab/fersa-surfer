@@ -71,6 +71,35 @@ namespace WorldRush.Core
         public bool Collected { get; internal set; }
     }
 
+    public enum PowerUpKind
+    {
+        /// <summary>Surfboard: schweben über allen Hindernissen, Münzspur in der Luft.</summary>
+        Board = 0,
+        /// <summary>Magnet: Münzen aus allen Spuren werden eingesammelt.</summary>
+        Magnet = 1,
+        /// <summary>Schild: ein Zusammenstoß wird verziehen.</summary>
+        Shield = 2,
+        /// <summary>Doppelte Münzpunkte.</summary>
+        Double = 3
+    }
+
+    public sealed class PowerUpItem
+    {
+        public PowerUpItem(int id, PowerUpKind kind, int lane, float z)
+        {
+            Id = id;
+            Kind = kind;
+            Lane = lane;
+            Z = z;
+        }
+
+        public int Id { get; }
+        public PowerUpKind Kind { get; }
+        public int Lane { get; }
+        public float Z { get; }
+        public bool Collected { get; internal set; }
+    }
+
     /// <summary>
     /// Kleiner, plattformunabhängiger Zufallsgenerator (xorshift32).
     /// Gleicher Seed = gleiche Strecke auf jedem Gerät.

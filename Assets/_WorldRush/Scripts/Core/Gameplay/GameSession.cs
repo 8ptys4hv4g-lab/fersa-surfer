@@ -13,15 +13,21 @@ namespace WorldRush.Core
 
     /// <summary>
     /// Das komplette Runner-Spiel als reine C#-Logik: Zustand, Bewegung, Strecke,
-    /// Kollisionen, Münzen, Punkte. Unity zeigt diesen Zustand nur an.
+    /// Kollisionen, Münzen, Power-ups, Combo, Punkte. Unity zeigt diesen Zustand nur an.
     /// </summary>
     public sealed class GameSession
     {
+        private const int SkyCoinIdBase = 1_000_000_000;
+
         private readonly RunnerConfig _config;
         private readonly List<ObstacleRow> _rows = new List<ObstacleRow>();
         private readonly List<Coin> _coins = new List<Coin>();
+        private readonly List<PowerUpItem> _powerUps = new List<PowerUpItem>();
         private readonly Queue<RunnerCommand> _pending = new Queue<RunnerCommand>();
+        private readonly float[] _powerTime = new float[4];
         private TrackGenerator _generator;
+        private DeterministicRandom _random;
+        private int _nextSkyCoinId;
 
         public GameSession(RunnerConfig config, int seed, int highScore = 0)
         {
@@ -33,8 +39,14 @@ namespace WorldRush.Core
         }
 
         public event Action<GameState> StateChanged;
-        public event Action<Coin> CoinCollected;
+        /// <summary>Münze eingesammelt (Münze, erhaltene Punkte).</summary>
+        public event Action<Coin, int> CoinCollected;
         public event Action<ObstacleRow, ObstacleKind> Crashed;
+        public event Action<PowerUpKind> PowerUpActivated;
+        /// <summary>Schild hat einen Zusammenstoß verhindert; die Reihe ist zerstört.</summary>
+        public event Action<ObstacleRow> ShieldUsed;
+        /// <summary>Neuer Combo-Multiplikator erreicht (2, 3, ...).</summary>
+        public event Action<int> ComboMilestone;
 
         public RunnerConfig Config => _config;
         public RunnerMotor Motor { get; }
@@ -46,7 +58,19 @@ namespace WorldRush.Core
         public float ElapsedTime { get; private set; }
         public IReadOnlyList<ObstacleRow> Rows => _rows;
         public IReadOnlyList<Coin> Coins => _coins;
+        public IReadOnlyList<PowerUpItem> PowerUps => _powerUps;
         public int FallbackRowsUsed => _generator.FallbackRowsUsed;
+        public int Combo { get; private set; }
+        public float ComboTimer { get; private set; }
+        public float Invulnerable { get; private set; }
+
+        public int ComboMultiplier => Math.Min(_config.MaxComboMultiplier, 1 + Combo / Math.Max(1, _config.ComboStep));
+        public float PowerTimeLeft(PowerUpKind kind) => _powerTime[(int)kind];
+        public bool IsPowerActive(PowerUpKind kind) => _powerTime[(int)kind] > 0f;
+        public static float DurationOf(RunnerConfig c, PowerUpKind kind) =>
+            kind == PowerUpKind.Board ? c.BoardDuration :
+            kind == PowerUpKind.Magnet ? c.MagnetDuration :
+            kind == PowerUpKind.Shield ? c.ShieldDuration : c.DoubleDuration;
 
         public void Start()
         {
@@ -90,6 +114,18 @@ namespace WorldRush.Core
             _pending.Enqueue(command);
         }
 
+        /// <summary>Aktiviert ein Power-up (beim Einsammeln; auch für Tests/Shop nutzbar).</summary>
+        public void ActivatePowerUp(PowerUpKind kind)
+        {
+            _powerTime[(int)kind] = DurationOf(_config, kind);
+            if (kind == PowerUpKind.Board)
+            {
+                Motor.SetHovering(true);
+                SpawnSkyCoins();
+            }
+            PowerUpActivated?.Invoke(kind);
+        }
+
         /// <summary>Simuliert <paramref name="deltaTime"/> Sekunden in kleinen Teilschritten.</summary>
         public void Tick(float deltaTime)
         {
@@ -109,6 +145,7 @@ namespace WorldRush.Core
         private void Step(float dt)
         {
             ElapsedTime += dt;
+            TickTimers(dt);
             Speed = Math.Min(_config.MaxSpeed, Speed + _config.Acceleration * dt);
             Motor.Tick(dt);
 
@@ -116,7 +153,7 @@ namespace WorldRush.Core
             PlayerZ += moved;
             Score.AddDistance(moved);
 
-            _generator.GenerateUntil(PlayerZ + _config.GenerateAheadDistance, Speed, _rows, _coins);
+            _generator.GenerateUntil(PlayerZ + _config.GenerateAheadDistance, Speed, _rows, _coins, _powerUps);
 
             float x = Motor.LateralX;
             float feet = Motor.FeetY;
@@ -128,27 +165,87 @@ namespace WorldRush.Core
                 for (int lane = Lanes.Left; lane <= Lanes.Right; lane++)
                 {
                     var kind = row.At(lane);
-                    if (CollisionRules.HitsObstacle(_config, x, PlayerZ, feet, top, lane, row.Z, kind))
+                    if (!CollisionRules.HitsObstacle(_config, x, PlayerZ, feet, top, lane, row.Z, kind)) continue;
+                    if (Invulnerable > 0f) continue;
+                    if (IsPowerActive(PowerUpKind.Shield))
                     {
-                        Crash(row, kind);
-                        return;
+                        _powerTime[(int)PowerUpKind.Shield] = 0f;
+                        Invulnerable = _config.ShieldGrace;
+                        for (int i = 0; i < row.Slots.Length; i++) row.Slots[i] = ObstacleKind.None;
+                        ShieldUsed?.Invoke(row);
+                        break;
                     }
+                    Crash(row, kind);
+                    return;
                 }
             }
 
+            bool magnet = IsPowerActive(PowerUpKind.Magnet);
             foreach (var coin in _coins)
             {
-                if (CollisionRules.CollectsCoin(_config, x, PlayerZ, feet, top, coin))
+                if (coin.Collected) continue;
+                bool hit = CollisionRules.CollectsCoin(_config, x, PlayerZ, feet, top, coin);
+                if (!hit && magnet)
                 {
-                    coin.Collected = true;
-                    Score.AddCoin();
-                    CoinCollected?.Invoke(coin);
+                    float ahead = coin.Z - PlayerZ;
+                    hit = ahead >= -_config.CoinPickupRadius && ahead <= _config.MagnetRange;
                 }
+                if (hit) CollectCoin(coin);
+            }
+
+            foreach (var p in _powerUps)
+            {
+                if (p.Collected) continue;
+                if (Math.Abs(p.Z - PlayerZ) > _config.CoinPickupRadius + 0.1f) continue;
+                if (Math.Abs(x - Lanes.ToX(p.Lane, _config.LaneWidth)) > _config.CoinPickupRadius + 0.1f) continue;
+                if (feet > 1.8f) continue;
+                p.Collected = true;
+                ActivatePowerUp(p.Kind);
             }
 
             float cleanupZ = PlayerZ - _config.CleanupBehindDistance;
             _rows.RemoveAll(r => r.Z < cleanupZ);
             _coins.RemoveAll(c => c.Z < cleanupZ || c.Collected);
+            _powerUps.RemoveAll(p => p.Z < cleanupZ || p.Collected);
+        }
+
+        private void TickTimers(float dt)
+        {
+            bool wasHovering = IsPowerActive(PowerUpKind.Board);
+            for (int i = 0; i < _powerTime.Length; i++) _powerTime[i] = Math.Max(0f, _powerTime[i] - dt);
+            if (wasHovering && !IsPowerActive(PowerUpKind.Board))
+            {
+                Motor.SetHovering(false);
+                Invulnerable = Math.Max(Invulnerable, _config.LandingGrace);
+            }
+            Invulnerable = Math.Max(0f, Invulnerable - dt);
+            ComboTimer = Math.Max(0f, ComboTimer - dt);
+            if (ComboTimer <= 0f) Combo = 0;
+        }
+
+        private void CollectCoin(Coin coin)
+        {
+            coin.Collected = true;
+            int before = ComboMultiplier;
+            Combo++;
+            ComboTimer = _config.ComboWindow;
+            int multiplier = ComboMultiplier * (IsPowerActive(PowerUpKind.Double) ? 2 : 1);
+            int points = Score.AddCoin(multiplier);
+            CoinCollected?.Invoke(coin, points);
+            if (ComboMultiplier > before) ComboMilestone?.Invoke(ComboMultiplier);
+        }
+
+        /// <summary>Münzspur in der Luft für das Surfboard, mit gelegentlichem Spurwechsel.</summary>
+        private void SpawnSkyCoins()
+        {
+            int lane = Motor.TargetLane;
+            float length = _config.BoardDuration * Math.Max(Speed, _config.StartSpeed);
+            for (float d = 10f; d < length; d += 2.6f)
+            {
+                if (_random.NextFloat() < 0.08f)
+                    lane = Math.Max(Lanes.Left, Math.Min(Lanes.Right, lane + (_random.NextFloat() < 0.5f ? -1 : 1)));
+                _coins.Add(new Coin(SkyCoinIdBase + _nextSkyCoinId++, lane, PlayerZ + d, _config.SkyCoinHeight));
+            }
         }
 
         private void Crash(ObstacleRow row, ObstacleKind kind)
@@ -163,14 +260,21 @@ namespace WorldRush.Core
             Seed = seed;
             _rows.Clear();
             _coins.Clear();
+            _powerUps.Clear();
             _pending.Clear();
+            Array.Clear(_powerTime, 0, _powerTime.Length);
             Motor.Reset();
             Score.Reset();
             PlayerZ = 0f;
             ElapsedTime = 0f;
+            Combo = 0;
+            ComboTimer = 0f;
+            Invulnerable = 0f;
+            _nextSkyCoinId = 0;
             Speed = _config.StartSpeed;
+            _random = new DeterministicRandom(unchecked(seed * 31 + 7));
             _generator = new TrackGenerator(_config, seed);
-            _generator.GenerateUntil(_config.GenerateAheadDistance, Speed, _rows, _coins);
+            _generator.GenerateUntil(_config.GenerateAheadDistance, Speed, _rows, _coins, _powerUps);
         }
 
         private void SetState(GameState state)

@@ -49,6 +49,22 @@ namespace WorldRush.Core
         public float CoinPickupRadius = 0.8f;
         public int CoinValue = 10;
 
+        // Power-ups und Combo
+        public float PowerUpChance = 0.13f;
+        public float BoardDuration = 7f;
+        public float MagnetDuration = 9f;
+        public float ShieldDuration = 20f;
+        public float DoubleDuration = 10f;
+        public float BoardHeight = 4.6f;
+        public float FallSpeed = 9f;
+        public float MagnetRange = 3f;
+        public float LandingGrace = 1.4f;
+        public float ShieldGrace = 1.0f;
+        public float SkyCoinHeight = 5.3f;
+        public float ComboWindow = 1.4f;
+        public int ComboStep = 10;
+        public int MaxComboMultiplier = 5;
+
         // Simulation
         public float MaxSubstep = 0.02f;
         public float MaxFrameDelta = 0.1f;

@@ -1,7 +1,15 @@
 # Projektstand – Fersa Surfer
 
-**Stand:** 2026-11-14 · Version 0.1.0 · **M0 + M1: vorbereiteter Unity-Projektstand**
+**Stand:** 2026-11-14 · Version 0.2.0 · **M0 + M1 ✅ in Unity bestätigt** · M2/M7 in Arbeit
 
+## Update 0.2.0 (14.11.2026)
+- ✅ **M0 + M1 bestätigt:** Projekt öffnet in Unity 6.6 (6000.6.9f1) unter Windows ohne Fehler; Spiel läuft im Play-Modus (vom Auftraggeber geprüft).
+- Input-System-Paket entfernt (inkompatibel mit 6.6) → Steuerung über eingebauten Input Manager.
+- Kern: Power-ups (Surfboard, Magnet, Schild, 2×), Combo-Multiplikator, Münzspur in der Luft – **105 von 105 Tests bestanden** (`dotnet test`).
+- Unity (M2-Vorstufe, **noch nicht in Unity geprüft**): Neon-Stadt mit leuchtenden Fenstern, Laternen, Bäume, Bloom/Farbkorrektur/Vignette (URP-Volume), prozeduraler Himmel mit Tag-Nacht-Wechsel, niedliche Figur (großer Kopf, Augen, Zopf), Outfit aus Text im Startmenü, Partikel, synthetische Sounds + Musik, HUD mit Combo und Power-up-Balken.
+- Web-Vorschau (three.js) mit Welt-Editor, Power-ups, Musik: `web-preview/index.html`.
+
+## Stand 0.1.0
 ```text
 FERSA SURFER — STATUS
 Stand: M0 + M1 (vorbereitet, Spiellogik getestet)

@@ -9,9 +9,9 @@ Die Grundlage ist der Masterplan v1.0 (`archive/2026-11-14_MASTERPLAN_v1.0.md`).
 
 | # | Meilenstein | Status | Fertig, wenn … | Empfehlung Modell / Denkstufe |
 |---|---|---|---|---|
-| M0 | Setup: Repo, Unity-Struktur, Doku, Tests | 🟡 | Projekt öffnet in Unity 6 ohne Fehler | Sonnet / Low |
-| M1 | Spielbarer Kern: 3 Spuren, Sprung, Rutschen, Hindernisse, Münzen, Punkte, Game Over | 🟡 Logik ✅ | Im Unity-Play-Modus spielbar | Opus / Medium |
-| M2 | Premium-3D-Stadt „Neon Garden City“, Kamera, Figur mit Animationen | ⬜ | Schöne 3D-Szene, FPS-Messung | Opus / High |
+| M0 | Setup: Repo, Unity-Struktur, Doku, Tests | ✅ | Projekt öffnet in Unity 6 ohne Fehler | Sonnet / Low |
+| M1 | Spielbarer Kern: 3 Spuren, Sprung, Rutschen, Hindernisse, Münzen, Punkte, Game Over | ✅ in Unity bestätigt | Im Unity-Play-Modus spielbar | Opus / Medium |
+| M2 | Premium-3D-Stadt „Neon Garden City“, Kamera, Figur mit Animationen | 🟡 Neon-Look + Platzhalter-Figur geschrieben, ungeprüft; Profi-3D-Figur fehlt (Kostenfreigabe) | Schöne 3D-Szene, FPS-Messung | Opus / High |
 | M3 | Menüs mit eigener Schrift, Einstellungen, Highscore | ⬜ | Kompletter Offline-Spielablauf | Sonnet / Medium |
 | M4 | Welt-Editor 2D: zeichnen, Pinsel, Rückgängig/Wiederholen, speichern | 🟡 Logik ✅ (getestet), Zeichen-UI + Speichern fehlt | Editierbarer Weltplan | Opus / High |
 | M5 | Zeichnung → echte 3D-Welt | 🟡 Weltplan-Logik ✅, 3D-Aufbau fehlt | Straße, Häuser, Bäume und See werden 3D | Opus / High |

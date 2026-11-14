@@ -2,7 +2,9 @@
     "name": "WorldRush.Runtime",
     "rootNamespace": "WorldRush.Runtime",
     "references": [
-        "WorldRush.Core"
+        "WorldRush.Core",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

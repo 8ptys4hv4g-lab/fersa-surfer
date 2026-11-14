@@ -2,13 +2,15 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using WorldRush.Core;
 
 namespace WorldRush.Runtime
 {
     /// <summary>
-    /// M1-Prototyp: baut die komplette Runner-Szene aus einfachen 3D-Formen auf und
-    /// zeigt den Zustand der reinen Spiellogik (<see cref="GameSession"/>) an.
+    /// Baut die komplette Runner-Szene im Neon-Garden-City-Stil auf und zeigt den Zustand der
+    /// reinen Spiellogik (<see cref="GameSession"/>) an: Stadt, Figur, Hindernisse, Münzen, Power-ups,
+    /// Partikel, Leuchten (Bloom), Tag-Nacht-Wechsel, Sound und Musik.
     /// Ein einziges leeres GameObject mit diesem Skript genügt.
     /// </summary>
     [DisallowMultipleComponent]
@@ -27,27 +29,43 @@ namespace WorldRush.Runtime
         [Header("Start")]
         public int seed = 0;
         public bool autoStart = false;
+        [TextArea] public string outfit = "Blonde Haare, rotes Kleid, braune Schuhe";
 
         private GameSession _session;
         private RunnerInput _input;
         private LocalSaveRepository _saveRepo;
         private SaveData _save;
         private Transform _player;
-        private Transform _playerBody;
+        private CharacterView _character;
         private Camera _camera;
+        private Light _sun;
+        private ParticleSystem _particles;
+        private AudioSource _sfx, _music;
+        private AudioClip _coinClip, _jumpClip, _slideClip, _powerClip, _crashClip;
+        private Material _skyMaterial;
+        private float _shake;
+
         private readonly Dictionary<int, GameObject> _rowViews = new Dictionary<int, GameObject>();
         private readonly Dictionary<int, GameObject> _coinViews = new Dictionary<int, GameObject>();
+        private readonly Dictionary<int, GameObject> _powerViews = new Dictionary<int, GameObject>();
         private readonly Stack<GameObject> _coinPool = new Stack<GameObject>();
         private readonly List<Transform> _groundTiles = new List<Transform>();
-        private readonly List<Transform> _buildings = new List<Transform>();
+        private readonly List<Transform> _scenery = new List<Transform>();
         private readonly HashSet<int> _seen = new HashSet<int>();
         private readonly List<int> _remove = new List<int>();
         private HudOverlay _hud;
 
         private const float TileLength = 20f;
         private const int TileCount = 10;
+        private const float SceneryLoop = 240f;
 
         public GameSession Session => _session;
+        public CharacterView Character => _character;
+
+        public static readonly Color NeonCyan = new Color(0.24f, 0.91f, 1f);
+        public static readonly Color NeonPink = new Color(1f, 0.31f, 0.64f);
+        public static readonly Color Sun = new Color(1f, 0.82f, 0.25f);
+        public static readonly Color Violet = new Color(0.61f, 0.55f, 1f);
 
         private void Awake()
         {
@@ -60,21 +78,45 @@ namespace WorldRush.Runtime
             int startSeed = seed != 0 ? seed : System.Environment.TickCount;
             _session = new GameSession(RunnerConfig.CreateDefault(), startSeed, _save.HighScore);
             _session.StateChanged += OnStateChanged;
+            _session.CoinCollected += OnCoin;
+            _session.PowerUpActivated += OnPowerUp;
+            _session.ShieldUsed += OnShieldUsed;
+            _session.ComboMilestone += m => _hud?.Popup("Combo ×" + m + "!", Sun);
+            _session.Crashed += (row, kind) => OnCrash();
             _input = new RunnerInput();
 
+            BuildAtmosphere();
             BuildEnvironment();
             BuildPlayer();
             BuildCamera();
+            BuildParticles();
+            BuildAudio();
 
             _hud = gameObject.AddComponent<HudOverlay>();
             _hud.Init(this);
+            ApplyOutfit(outfit);
 
             if (autoStart) _session.Start();
         }
 
-        public void StartRun() => _session.Start();
-        public void Restart() { ClearViews(); _session.Restart(); }
+        public void StartRun()
+        {
+            if (_session.State == GameState.Ready) _session.Start();
+        }
+
+        public void Restart()
+        {
+            ClearViews();
+            _session.Restart();
+        }
+
         public void TogglePause() => _session.TogglePause();
+
+        public List<string> ApplyOutfit(string text)
+        {
+            outfit = text ?? "";
+            return _character.ApplyOutfit(outfit);
+        }
 
         private void Update()
         {
@@ -90,27 +132,51 @@ namespace WorldRush.Runtime
                     if (_input.ConfirmPressed) Restart();
                     break;
                 case GameState.Running:
-                    foreach (var c in commands) _session.Enqueue(c);
+                    foreach (var c in commands)
+                    {
+                        if (c == RunnerCommand.Jump && !_session.Motor.IsJumping && _session.Motor.FeetY <= 0f && !_session.Motor.IsHovering) _sfx.PlayOneShot(_jumpClip, 0.7f);
+                        if (c == RunnerCommand.Slide && !_session.Motor.IsSliding && !_session.Motor.IsHovering) _sfx.PlayOneShot(_slideClip, 0.6f);
+                        _session.Enqueue(c);
+                    }
                     _session.Tick(Time.deltaTime);
                     break;
             }
 
+            UpdateMusic();
             SyncViews();
+            UpdateSky();
         }
 
         private void LateUpdate()
         {
             if (_camera == null) return;
-            var target = new Vector3(_session.Motor.LateralX * 0.6f, 4.2f + _session.Motor.FeetY * 0.4f, _session.PlayerZ - 7.5f);
+            var motor = _session.Motor;
+            bool menu = _session.State == GameState.Ready;
+            Vector3 target = menu
+                ? new Vector3(2.6f, 2.3f, _session.PlayerZ + 4.6f)
+                : new Vector3(motor.LateralX * 0.55f, 4.3f + motor.FeetY * 0.35f, _session.PlayerZ - 7.6f);
             var cam = _camera.transform;
-            cam.position = Vector3.Lerp(cam.position, target, 1f - Mathf.Exp(-10f * Time.deltaTime));
-            cam.rotation = Quaternion.Euler(16f, 0f, 0f);
+            cam.position = Vector3.Lerp(cam.position, target, 1f - Mathf.Exp(-(menu ? 3f : 9f) * Time.deltaTime));
+            if (_shake > 0f)
+            {
+                _shake -= Time.deltaTime;
+                cam.position += Random.insideUnitSphere * _shake * 0.6f;
+            }
+            Vector3 look = menu
+                ? new Vector3(0f, 1.3f, _session.PlayerZ)
+                : new Vector3(motor.LateralX * 0.4f, 1.1f, _session.PlayerZ + 8f);
+            cam.rotation = Quaternion.Slerp(cam.rotation, Quaternion.LookRotation(look - cam.position), 1f - Mathf.Exp(-10f * Time.deltaTime));
             float speedT = Mathf.InverseLerp(_session.Config.StartSpeed, _session.Config.MaxSpeed, _session.Speed);
-            _camera.fieldOfView = Mathf.Lerp(60f, 68f, speedT);
+            float fov = menu ? 50f : Mathf.Lerp(60f, 70f, speedT) + (motor.IsHovering ? 4f : 0f);
+            _camera.fieldOfView = Mathf.Lerp(_camera.fieldOfView, fov, Time.deltaTime * 3f);
+            if (_sun != null) _sun.transform.position = _player.position;
         }
+
+        // ---------- Ereignisse ----------
 
         private void OnStateChanged(GameState state)
         {
+            if (state == GameState.Running && !_music.isPlaying) _music.Play();
             if (state != GameState.GameOver) return;
             _save.RunsPlayed++;
             _save.TotalCoins += _session.Score.Coins;
@@ -119,6 +185,44 @@ namespace WorldRush.Runtime
             catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] Speichern fehlgeschlagen: " + e.Message); }
         }
 
+        private void OnCoin(Coin coin, int points)
+        {
+            _sfx.pitch = 1f + Mathf.Min(_session.Combo, 24) * 0.02f;
+            _sfx.PlayOneShot(_coinClip, 0.5f);
+            _sfx.pitch = 1f;
+            Burst(_player.position + Vector3.up * 1.2f, Sun, 6);
+        }
+
+        private void OnPowerUp(PowerUpKind kind)
+        {
+            _sfx.PlayOneShot(_powerClip, 0.8f);
+            Burst(_player.position + Vector3.up * 1.4f, PowerColor(kind), 40);
+            _hud?.Popup(PowerName(kind) + "!", PowerColor(kind));
+        }
+
+        private void OnShieldUsed(ObstacleRow row)
+        {
+            _sfx.PlayOneShot(_crashClip, 0.5f);
+            _shake = 0.3f;
+            Burst(new Vector3(_session.Motor.LateralX, 1.5f, row.Z), Violet, 60);
+            if (_rowViews.TryGetValue(row.Id, out var view)) { Destroy(view); _rowViews.Remove(row.Id); }
+            _hud?.Popup("Schild!", Violet);
+        }
+
+        private void OnCrash()
+        {
+            _sfx.PlayOneShot(_crashClip, 0.9f);
+            _shake = 0.5f;
+            Burst(_player.position + Vector3.up * 1.2f, NeonPink, 80);
+            _music.Stop();
+        }
+
+        public static string PowerName(PowerUpKind k) =>
+            k == PowerUpKind.Board ? "Surfboard" : k == PowerUpKind.Magnet ? "Magnet" : k == PowerUpKind.Shield ? "Schild" : "2× Punkte";
+
+        public static Color PowerColor(PowerUpKind k) =>
+            k == PowerUpKind.Board ? NeonCyan : k == PowerUpKind.Magnet ? new Color(1f, 0.35f, 0.43f) : k == PowerUpKind.Shield ? Violet : Sun;
+
         // ---------- Darstellung ----------
 
         private void SyncViews()
@@ -126,22 +230,24 @@ namespace WorldRush.Runtime
             var cfg = _session.Config;
             var motor = _session.Motor;
             _player.position = new Vector3(motor.LateralX, motor.FeetY, _session.PlayerZ);
-            float h = motor.Height;
-            _playerBody.localScale = new Vector3(0.8f, h * 0.5f, 0.8f);
-            _playerBody.localPosition = new Vector3(0f, h * 0.5f, 0f);
+            _player.rotation = Quaternion.Euler(0f, 0f, (Lanes.ToX(motor.TargetLane, cfg.LaneWidth) - motor.LateralX) * -4f);
+            bool running = _session.State == GameState.Running;
+            _character.Animate(motor, running, motor.IsHovering, _session.IsPowerActive(PowerUpKind.Shield), _session.Speed, Time.deltaTime);
+            bool blink = running && _session.Invulnerable > 0f && !motor.IsHovering && Mathf.FloorToInt(Time.time * 11f) % 2 == 0;
+            _character.Root.gameObject.SetActive(!blink);
+            if (running && motor.IsHovering && Random.value < 0.6f) Burst(_player.position - Vector3.forward * 0.9f, NeonCyan, 1);
 
             // Hindernisreihen
             _seen.Clear();
             foreach (var row in _session.Rows)
             {
                 _seen.Add(row.Id);
-                if (!_rowViews.ContainsKey(row.Id)) _rowViews[row.Id] = CreateRowView(row, cfg);
+                if (!_rowViews.ContainsKey(row.Id) && !row.IsEmpty) _rowViews[row.Id] = CreateRowView(row, cfg);
             }
-            _remove.Clear();
-            foreach (var kv in _rowViews) if (!_seen.Contains(kv.Key)) _remove.Add(kv.Key);
-            foreach (var id in _remove) { Destroy(_rowViews[id]); _rowViews.Remove(id); }
+            RemoveUnseen(_rowViews, go => Destroy(go));
 
-            // Münzen (gepoolt)
+            // Münzen (gepoolt), mit Magnet-Sog
+            bool magnet = _session.IsPowerActive(PowerUpKind.Magnet);
             _seen.Clear();
             foreach (var coin in _session.Coins)
             {
@@ -153,37 +259,49 @@ namespace WorldRush.Runtime
                     go.transform.position = new Vector3(Lanes.ToX(coin.Lane, cfg.LaneWidth), coin.Y, coin.Z);
                     _coinViews[coin.Id] = go;
                 }
-                go.transform.rotation = Quaternion.Euler(90f, Time.time * 180f, 0f);
+                if (magnet && coin.Z - _session.PlayerZ < 16f)
+                    go.transform.position = Vector3.Lerp(go.transform.position, _player.position + Vector3.up, Time.deltaTime * 6f);
+                go.transform.rotation = Quaternion.Euler(90f, Time.time * 200f + coin.Id * 7f, 0f);
             }
-            _remove.Clear();
-            foreach (var kv in _coinViews) if (!_seen.Contains(kv.Key)) _remove.Add(kv.Key);
-            foreach (var id in _remove)
-            {
-                var go = _coinViews[id];
-                go.SetActive(false);
-                _coinPool.Push(go);
-                _coinViews.Remove(id);
-            }
+            RemoveUnseen(_coinViews, go => { go.SetActive(false); _coinPool.Push(go); });
 
-            // Boden und Gebäude wandern mit (Endlos-Effekt).
+            // Power-ups
+            _seen.Clear();
+            foreach (var p in _session.PowerUps)
+            {
+                _seen.Add(p.Id);
+                if (!_powerViews.TryGetValue(p.Id, out var go)) _powerViews[p.Id] = go = CreatePowerView(p, cfg);
+                go.transform.position = new Vector3(Lanes.ToX(p.Lane, cfg.LaneWidth), 1f + Mathf.Sin(Time.time * 3f + p.Id) * 0.15f, p.Z);
+                go.transform.rotation = Quaternion.Euler(0f, Time.time * 140f, 0f);
+            }
+            RemoveUnseen(_powerViews, go => Destroy(go));
+
+            // Boden und Kulisse wandern mit (Endlos-Effekt).
             float baseZ = Mathf.Floor((_session.PlayerZ - TileLength) / TileLength) * TileLength;
             for (int i = 0; i < _groundTiles.Count; i++)
-                _groundTiles[i].position = new Vector3(0f, -0.05f, baseZ + i * TileLength + TileLength * 0.5f);
-            for (int i = 0; i < _buildings.Count; i++)
+                _groundTiles[i].position = new Vector3(0f, 0f, baseZ + i * TileLength + TileLength * 0.5f);
+            foreach (var b in _scenery)
             {
-                var b = _buildings[i];
-                float span = TileCount * TileLength;
                 float z = b.position.z;
-                if (z < _session.PlayerZ - 20f) z += span;
-                else if (z > _session.PlayerZ + span) z -= span; // nach Neustart
+                if (z < _session.PlayerZ - 20f) z += SceneryLoop;
+                else if (z > _session.PlayerZ + SceneryLoop) z -= SceneryLoop * Mathf.Ceil((z - _session.PlayerZ - 20f) / SceneryLoop);
                 b.position = new Vector3(b.position.x, b.position.y, z);
             }
+        }
+
+        private void RemoveUnseen(Dictionary<int, GameObject> views, System.Action<GameObject> release)
+        {
+            _remove.Clear();
+            foreach (var kv in views) if (!_seen.Contains(kv.Key)) _remove.Add(kv.Key);
+            foreach (var id in _remove) { release(views[id]); views.Remove(id); }
         }
 
         private void ClearViews()
         {
             foreach (var go in _rowViews.Values) Destroy(go);
             _rowViews.Clear();
+            foreach (var go in _powerViews.Values) Destroy(go);
+            _powerViews.Clear();
             foreach (var go in _coinViews.Values) { go.SetActive(false); _coinPool.Push(go); }
             _coinViews.Clear();
         }
@@ -196,21 +314,25 @@ namespace WorldRush.Runtime
             {
                 var kind = row.At(lane);
                 if (kind == ObstacleKind.None) continue;
+                float x = Lanes.ToX(lane, cfg.LaneWidth);
                 CollisionRules.GetVerticalRange(cfg, kind, out float bottom, out float top);
-                var mat = kind == ObstacleKind.Hurdle ? hurdleMaterial : kind == ObstacleKind.Overhead ? overheadMaterial : blockMaterial;
-                var cube = MakePrimitive(PrimitiveType.Cube, kind.ToString(), root.transform, mat);
-                cube.transform.localPosition = new Vector3(Lanes.ToX(lane, cfg.LaneWidth), (bottom + top) * 0.5f, 0f);
-                cube.transform.localScale = new Vector3(cfg.ObstacleHalfWidth * 2f, top - bottom, cfg.ObstacleHalfDepth * 2f);
-
-                if (kind == ObstacleKind.Overhead)
+                float w = cfg.ObstacleHalfWidth * 2f, d = cfg.ObstacleHalfDepth * 2f;
+                if (kind == ObstacleKind.Hurdle)
                 {
-                    // Pfosten machen den Balken klar erkennbar (rein optisch, keine Kollision).
-                    for (int side = -1; side <= 1; side += 2)
-                    {
-                        var post = MakePrimitive(PrimitiveType.Cube, "Post", root.transform, overheadMaterial);
-                        post.transform.localPosition = new Vector3(Lanes.ToX(lane, cfg.LaneWidth) + side * (cfg.ObstacleHalfWidth + 0.08f), bottom * 0.5f, 0f);
-                        post.transform.localScale = new Vector3(0.12f, bottom, 0.12f);
-                    }
+                    Box(root.transform, hurdleMaterial, new Vector3(x, top - 0.18f, 0f), new Vector3(w, 0.32f, 0.25f));
+                    for (int i = -2; i <= 2; i++) Box(root.transform, laneLineMaterial, new Vector3(x + i * 0.4f, top - 0.18f, 0f), new Vector3(0.17f, 0.33f, 0.26f), _stripe);
+                    for (int s = -1; s <= 1; s += 2) Box(root.transform, laneLineMaterial, new Vector3(x + s * 0.9f, (top - 0.3f) * 0.5f, 0f), new Vector3(0.12f, top - 0.3f, 0.12f));
+                }
+                else if (kind == ObstacleKind.Overhead)
+                {
+                    Box(root.transform, overheadMaterial, new Vector3(x, bottom + 0.2f, 0f), new Vector3(w + 0.1f, 0.35f, 0.4f));
+                    Box(root.transform, overheadMaterial, new Vector3(x, bottom + 0.9f, 0f), new Vector3(1.6f, 0.9f, 0.1f));
+                    for (int s = -1; s <= 1; s += 2) Box(root.transform, laneLineMaterial, new Vector3(x + s * 1.05f, (bottom + 1.4f) * 0.5f, 0f), new Vector3(0.14f, bottom + 1.4f, 0.14f));
+                }
+                else
+                {
+                    Box(root.transform, blockMaterial, new Vector3(x, (top - 0.3f) * 0.5f, 0f), new Vector3(w, top - 0.3f, d + 1.1f));
+                    Box(root.transform, laneLineMaterial, new Vector3(x, top - 0.25f, 0f), new Vector3(w + 0.04f, 0.18f, d + 1.14f));
                 }
             }
             return root;
@@ -219,75 +341,205 @@ namespace WorldRush.Runtime
         private GameObject CreateCoinView()
         {
             var coin = MakePrimitive(PrimitiveType.Cylinder, "Coin", transform, coinMaterial);
-            coin.transform.localScale = new Vector3(0.6f, 0.06f, 0.6f);
+            coin.transform.localScale = new Vector3(0.62f, 0.05f, 0.62f);
             return coin;
+        }
+
+        private GameObject CreatePowerView(PowerUpItem p, RunnerConfig cfg)
+        {
+            var root = new GameObject("PowerUp " + p.Kind);
+            var col = PowerColor(p.Kind);
+            var mat = MaterialFactory.Create(col, 0.8f, col * 2.2f);
+            switch (p.Kind)
+            {
+                case PowerUpKind.Board: Box(root.transform, mat, Vector3.zero, new Vector3(0.5f, 0.08f, 1.3f)).transform.localRotation = Quaternion.Euler(30f, 0, 0); break;
+                case PowerUpKind.Magnet:
+                    Box(root.transform, mat, new Vector3(0, 0.15f, 0), new Vector3(0.7f, 0.18f, 0.2f));
+                    for (int s = -1; s <= 1; s += 2) Box(root.transform, mat, new Vector3(s * 0.26f, -0.1f, 0), new Vector3(0.18f, 0.5f, 0.2f));
+                    break;
+                case PowerUpKind.Shield: MakePrimitive(PrimitiveType.Sphere, "Orb", root.transform, mat).transform.localScale = Vector3.one * 0.7f; break;
+                default: Box(root.transform, mat, Vector3.zero, Vector3.one * 0.5f).transform.localRotation = Quaternion.Euler(45f, 0, 45f); break;
+            }
+            var ring = new GameObject("Halo");
+            ring.transform.SetParent(root.transform, false);
+            ring.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            ring.AddComponent<MeshFilter>().sharedMesh = MeshFactory.Ring(0.62f, 0.03f, 40);
+            ring.AddComponent<MeshRenderer>().sharedMaterial = MaterialFactory.DoubleSided(MaterialFactory.Create(col, 0.9f, col * 3f));
+            return root;
+        }
+
+        // ---------- Aufbau ----------
+
+        private Material _stripe;
+
+        private void BuildAtmosphere()
+        {
+            var lightGo = new GameObject("Sun");
+            _sun = lightGo.AddComponent<Light>();
+            _sun.type = LightType.Directional;
+            _sun.intensity = 1.15f;
+            _sun.color = new Color(1f, 0.9f, 0.82f);
+            _sun.shadows = LightShadows.Soft;
+            lightGo.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
+
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogStartDistance = 50f;
+            RenderSettings.fogEndDistance = 160f;
+
+            var skyShader = Shader.Find("Skybox/Procedural");
+            if (skyShader != null)
+            {
+                _skyMaterial = new Material(skyShader);
+                _skyMaterial.SetFloat("_SunSize", 0.08f);
+                _skyMaterial.SetFloat("_AtmosphereThickness", 1.6f);
+                _skyMaterial.SetFloat("_Exposure", 1.25f);
+                RenderSettings.skybox = _skyMaterial;
+            }
+
+            // Leuchten (Bloom) und kräftige Farben über ein globales URP-Volume
+            if (GraphicsSettings.currentRenderPipeline != null)
+            {
+                var volumeGo = new GameObject("PostFX");
+                volumeGo.transform.SetParent(transform, false);
+                var volume = volumeGo.AddComponent<Volume>();
+                volume.isGlobal = true;
+                volume.priority = 10f;
+                var profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                var bloom = profile.Add<Bloom>(true);
+                bloom.intensity.Override(1.1f);
+                bloom.threshold.Override(0.95f);
+                bloom.scatter.Override(0.65f);
+                var colors = profile.Add<ColorAdjustments>(true);
+                colors.saturation.Override(18f);
+                colors.contrast.Override(8f);
+                var vignette = profile.Add<Vignette>(true);
+                vignette.intensity.Override(0.22f);
+                volume.profile = profile;
+            }
+        }
+
+        private static readonly Color[][] Skies =
+        {
+            new[] { new Color(0.75f, 0.35f, 0.85f), new Color(0.42f, 0.25f, 0.63f), new Color(0.55f, 0.6f, 1f) },  // Sonnenuntergang
+            new[] { new Color(0.15f, 0.2f, 0.55f), new Color(0.11f, 0.12f, 0.3f), new Color(0.3f, 0.35f, 0.7f) },   // Nacht
+            new[] { new Color(0.15f, 0.7f, 0.6f), new Color(0.11f, 0.26f, 0.32f), new Color(0.35f, 0.75f, 0.8f) },  // Polarlicht
+            new[] { new Color(1f, 0.55f, 0.6f), new Color(0.56f, 0.31f, 0.56f), new Color(0.8f, 0.65f, 0.9f) },     // Morgen
+        };
+
+        private void UpdateSky()
+        {
+            float phase = (_session.Score.Distance / 550f) % Skies.Length;
+            int i = (int)phase;
+            float f = phase - i;
+            float t = f < 0.7f ? 0f : Mathf.SmoothStep(0f, 1f, (f - 0.7f) / 0.3f);
+            var a = Skies[i];
+            var b = Skies[(i + 1) % Skies.Length];
+            Color tint = Color.Lerp(a[0], b[0], t), fog = Color.Lerp(a[1], b[1], t), amb = Color.Lerp(a[2], b[2], t);
+            if (_skyMaterial != null) _skyMaterial.SetColor("_SkyTint", tint);
+            RenderSettings.fogColor = fog;
+            RenderSettings.ambientSkyColor = amb;
+            RenderSettings.ambientEquatorColor = Color.Lerp(amb, fog, 0.5f);
+            RenderSettings.ambientGroundColor = fog * 0.6f;
+            if (_camera != null && _skyMaterial == null) _camera.backgroundColor = fog;
         }
 
         private void BuildEnvironment()
         {
             var cfg = _session.Config;
-
-            var lightGo = new GameObject("Sun");
-            var sun = lightGo.AddComponent<Light>();
-            sun.type = LightType.Directional;
-            sun.intensity = 1.2f;
-            sun.color = new Color(1f, 0.95f, 0.88f);
-            sun.shadows = LightShadows.Soft;
-            lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-            RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.55f, 0.65f, 0.95f);
-            RenderSettings.ambientEquatorColor = new Color(0.75f, 0.6f, 0.85f);
-            RenderSettings.ambientGroundColor = new Color(0.25f, 0.22f, 0.3f);
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.72f, 0.66f, 0.92f);
-            RenderSettings.fogStartDistance = 60f;
-            RenderSettings.fogEndDistance = 170f;
-
             float trackWidth = cfg.LaneWidth * 3f + 1f;
+            _stripe = MaterialFactory.Create(new Color(0.14f, 0.12f, 0.23f), 0.3f);
+            var lawn = MaterialFactory.Create(new Color(0.24f, 0.17f, 0.48f), 0.1f);
+            var edge = MaterialFactory.Create(NeonPink, 0.6f, NeonPink * 2.2f);
+
             for (int i = 0; i < TileCount; i++)
             {
                 var tile = new GameObject("GroundTile " + i).transform;
                 tile.SetParent(transform);
-                var road = MakePrimitive(PrimitiveType.Cube, "Road", tile, groundMaterial);
-                road.transform.localScale = new Vector3(trackWidth, 0.1f, TileLength);
+                Box(tile, groundMaterial, new Vector3(0f, -0.05f, 0f), new Vector3(trackWidth, 0.1f, TileLength));
+                Box(tile, lawn, new Vector3(0f, -0.08f, 0f), new Vector3(120f, 0.1f, TileLength));
                 for (int line = 0; line < 2; line++)
-                {
-                    var stripe = MakePrimitive(PrimitiveType.Cube, "LaneLine", tile, laneLineMaterial);
-                    stripe.transform.localPosition = new Vector3((line - 0.5f) * cfg.LaneWidth, 0.06f, 0f);
-                    stripe.transform.localScale = new Vector3(0.08f, 0.02f, TileLength * 0.9f);
-                }
+                    for (int dash = 0; dash < 4; dash++)
+                        Box(tile, laneLineMaterial, new Vector3((line - 0.5f) * cfg.LaneWidth, 0.01f, -TileLength * 0.5f + 2.5f + dash * 5f), new Vector3(0.1f, 0.02f, 2.8f));
+                for (int s = -1; s <= 1; s += 2)
+                    Box(tile, edge, new Vector3(s * trackWidth * 0.5f, 0.02f, 0f), new Vector3(0.12f, 0.04f, TileLength));
                 _groundTiles.Add(tile);
             }
 
-            // Einfache Stadtkulisse: Blöcke links und rechts (wird in M2 durch Premium-Assets ersetzt).
+            // Neon-Hochhäuser mit leuchtenden Fenstern
             var rnd = new DeterministicRandom(7);
-            for (int i = 0; i < TileCount * 2; i++)
+            var palette = new[] { new Color(0.35f, 0.25f, 0.82f), new Color(0.48f, 0.31f, 0.88f), new Color(0.23f, 0.43f, 0.91f), new Color(0.75f, 0.31f, 0.85f), new Color(0.88f, 0.37f, 0.66f) };
+            var windows = WindowTexture();
+            for (int i = 0; i < 26; i++)
             {
                 for (int side = -1; side <= 1; side += 2)
                 {
-                    var b = MakePrimitive(PrimitiveType.Cube, "Building", transform, buildingMaterial);
-                    float height = rnd.Range(6f, 22f);
-                    float width = rnd.Range(4f, 8f);
-                    b.transform.localScale = new Vector3(width, height, rnd.Range(5f, 9f));
-                    b.transform.position = new Vector3(side * (trackWidth * 0.5f + 3f + width * 0.5f + rnd.Range(0f, 4f)), height * 0.5f, i * TileLength * 0.5f);
-                    var r = b.GetComponent<Renderer>();
-                    var block = new MaterialPropertyBlock();
-                    Color tint = Color.HSVToRGB(rnd.Range(0.55f, 0.95f), 0.35f, rnd.Range(0.75f, 1f));
-                    block.SetColor("_BaseColor", tint);
-                    block.SetColor("_Color", tint);
-                    r.SetPropertyBlock(block);
-                    _buildings.Add(b.transform);
+                    float height = rnd.Range(8f, 34f), width = rnd.Range(5f, 10f), depth = rnd.Range(6f, 11f);
+                    var mat = MaterialFactory.Create(palette[rnd.Range(0, palette.Length)], 0.55f, Color.white * 1.6f);
+                    mat.SetTexture("_EmissionMap", windows);
+                    mat.mainTextureScale = new Vector2(Mathf.Max(1f, Mathf.Round(width / 4f)), Mathf.Max(1f, Mathf.Round(height / 7f)));
+                    var b = MakePrimitive(PrimitiveType.Cube, "Building", transform, mat);
+                    b.transform.localScale = new Vector3(width, height, depth);
+                    b.transform.position = new Vector3(side * (trackWidth * 0.5f + 7f + width * 0.5f + rnd.Range(0f, 8f)), height * 0.5f, i * (SceneryLoop / 26f));
+                    _scenery.Add(b.transform);
                 }
             }
+
+            // Bäume mit Pastellkronen und Neon-Laternen am Straßenrand
+            var trunk = MaterialFactory.Create(new Color(0.36f, 0.23f, 0.18f), 0.2f);
+            var crowns = new[] { new Color(1f, 0.48f, 0.78f), new Color(0.49f, 1f, 0.69f), new Color(1f, 0.82f, 0.48f), new Color(0.61f, 0.55f, 1f) };
+            var lampMat = MaterialFactory.Create(NeonCyan, 0.8f, NeonCyan * 3f);
+            for (int i = 0; i < 30; i++)
+            {
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    var tree = new GameObject("Tree").transform;
+                    tree.SetParent(transform);
+                    MakePrimitive(PrimitiveType.Cylinder, "Trunk", tree, trunk).transform.localScale = new Vector3(0.35f, 0.8f, 0.35f);
+                    var crown = MakePrimitive(PrimitiveType.Sphere, "Crown", tree, MaterialFactory.Create(crowns[rnd.Range(0, crowns.Length)], 0.3f));
+                    crown.transform.localPosition = new Vector3(0, 2.2f, 0);
+                    crown.transform.localScale = Vector3.one * rnd.Range(1.8f, 2.6f);
+                    tree.position = new Vector3(side * (trackWidth * 0.5f + 2.5f + rnd.Range(0f, 2f)), 0.8f, i * (SceneryLoop / 30f));
+                    _scenery.Add(tree);
+                }
+                if (i % 3 == 0)
+                {
+                    for (int side = -1; side <= 1; side += 2)
+                    {
+                        var lamp = new GameObject("Lamp").transform;
+                        lamp.SetParent(transform);
+                        Box(lamp, laneLineMaterial, new Vector3(0, 2f, 0), new Vector3(0.12f, 4f, 0.12f));
+                        Box(lamp, lampMat, new Vector3(-side * 0.5f, 4f, 0), new Vector3(1.1f, 0.14f, 0.3f));
+                        lamp.position = new Vector3(side * (trackWidth * 0.5f + 0.8f), 0f, i * (SceneryLoop / 30f) + 3f);
+                        _scenery.Add(lamp);
+                    }
+                }
+            }
+        }
+
+        private static Texture2D WindowTexture()
+        {
+            var tex = new Texture2D(16, 32, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
+            var r = new System.Random(5);
+            var px = new Color32[16 * 32];
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 16; x++)
+                {
+                    bool window = x % 4 >= 1 && x % 4 <= 2 && y % 4 >= 1 && y % 4 <= 2;
+                    bool lit = window && ((x / 4) * 7 + (y / 4) * 13 + r.Next(3)) % 5 < 3;
+                    px[y * 16 + x] = lit ? ((x / 4 + y / 4) % 3 == 0 ? new Color32(140, 240, 255, 255) : new Color32(255, 214, 130, 255)) : new Color32(0, 0, 0, 255);
+                }
+            tex.SetPixels32(px);
+            tex.Apply();
+            return tex;
         }
 
         private void BuildPlayer()
         {
             _player = new GameObject("Player").transform;
             _player.SetParent(transform);
-            var body = MakePrimitive(PrimitiveType.Capsule, "Body", _player, playerMaterial);
-            _playerBody = body.transform;
+            _character = new CharacterView(_player);
         }
 
         private void BuildCamera()
@@ -299,13 +551,93 @@ namespace WorldRush.Runtime
                 _camera = go.AddComponent<Camera>();
                 go.AddComponent<AudioListener>();
             }
-            _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = new Color(0.72f, 0.66f, 0.92f);
-            _camera.farClipPlane = 220f;
-            _camera.transform.position = new Vector3(0f, 4.2f, -7.5f);
+            _camera.clearFlags = _skyMaterial != null ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
+            _camera.farClipPlane = 240f;
+            _camera.transform.position = new Vector3(2.6f, 2.3f, 4.6f);
+            if (GraphicsSettings.currentRenderPipeline != null)
+            {
+                var data = _camera.GetUniversalAdditionalCameraData();
+                if (data != null) data.renderPostProcessing = true;
+            }
+        }
+
+        private void BuildParticles()
+        {
+            var go = new GameObject("Sparkles");
+            go.transform.SetParent(transform, false);
+            _particles = go.AddComponent<ParticleSystem>();
+            _particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = _particles.main;
+            main.loop = false;
+            main.playOnAwake = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(2f, 7f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.08f, 0.2f);
+            main.gravityModifier = 1.2f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 1500;
+            var emission = _particles.emission;
+            emission.rateOverTime = 0f;
+            var shape = _particles.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.25f;
+            var size = _particles.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0f));
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Sprites/Default");
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            if (shader != null) r.sharedMaterial = new Material(shader);
+            _particles.Play();
+        }
+
+        private void Burst(Vector3 position, Color color, int count)
+        {
+            if (_particles == null) return;
+            var p = new ParticleSystem.EmitParams { position = position, applyShapeToPosition = true, startColor = color };
+            _particles.Emit(p, count);
+        }
+
+        private void BuildAudio()
+        {
+            _sfx = gameObject.AddComponent<AudioSource>();
+            _sfx.playOnAwake = false;
+            _music = gameObject.AddComponent<AudioSource>();
+            _music.playOnAwake = false;
+            _music.loop = true;
+            _music.volume = 0.45f;
+            _music.clip = SynthAudio.MusicLoop();
+            _coinClip = SynthAudio.Coin();
+            _jumpClip = SynthAudio.Jump();
+            _slideClip = SynthAudio.Slide();
+            _powerClip = SynthAudio.PowerUp();
+            _crashClip = SynthAudio.Crash();
+        }
+
+        public bool SoundOn
+        {
+            get => AudioListener.volume > 0f;
+            set => AudioListener.volume = value ? 1f : 0f;
+        }
+
+        private void UpdateMusic()
+        {
+            if (_music == null) return;
+            bool running = _session.State == GameState.Running;
+            if (running && !_music.isPlaying) _music.Play();
+            if (_session.State == GameState.Paused && _music.isPlaying) _music.Pause();
+            float target = 1f + (_session.Speed - _session.Config.StartSpeed) / 60f + (_session.Motor.IsHovering ? 0.06f : 0f);
+            _music.pitch = Mathf.Lerp(_music.pitch, target, Time.deltaTime * 2f);
         }
 
         // ---------- Hilfen ----------
+
+        private static GameObject Box(Transform parent, Material mat, Vector3 localPos, Vector3 scale, Material overrideMat = null)
+        {
+            var go = MakePrimitive(PrimitiveType.Cube, "Box", parent, overrideMat ?? mat);
+            go.transform.localPosition = localPos;
+            go.transform.localScale = scale;
+            return go;
+        }
 
         private static GameObject MakePrimitive(PrimitiveType type, string name, Transform parent, Material mat)
         {
@@ -320,13 +652,13 @@ namespace WorldRush.Runtime
 
         private void CreateMaterialsIfMissing()
         {
-            groundMaterial = groundMaterial ? groundMaterial : MaterialFactory.Create(new Color(0.22f, 0.22f, 0.32f), 0.4f);
-            laneLineMaterial = laneLineMaterial ? laneLineMaterial : MaterialFactory.Create(new Color(0.9f, 0.95f, 1f), 0.2f, new Color(0.4f, 0.6f, 1f));
-            playerMaterial = playerMaterial ? playerMaterial : MaterialFactory.Create(new Color(1f, 0.45f, 0.35f), 0.6f);
-            hurdleMaterial = hurdleMaterial ? hurdleMaterial : MaterialFactory.Create(new Color(1f, 0.8f, 0.2f), 0.5f);
-            overheadMaterial = overheadMaterial ? overheadMaterial : MaterialFactory.Create(new Color(0.3f, 0.85f, 1f), 0.5f);
-            blockMaterial = blockMaterial ? blockMaterial : MaterialFactory.Create(new Color(0.95f, 0.3f, 0.55f), 0.5f);
-            coinMaterial = coinMaterial ? coinMaterial : MaterialFactory.Create(new Color(1f, 0.85f, 0.25f), 0.9f, new Color(0.6f, 0.45f, 0f));
+            groundMaterial = groundMaterial ? groundMaterial : MaterialFactory.Create(new Color(0.11f, 0.09f, 0.22f), 0.55f);
+            laneLineMaterial = laneLineMaterial ? laneLineMaterial : MaterialFactory.Create(new Color(0.85f, 0.95f, 1f), 0.6f, NeonCyan * 1.8f);
+            playerMaterial = playerMaterial ? playerMaterial : MaterialFactory.Create(NeonPink, 0.6f);
+            hurdleMaterial = hurdleMaterial ? hurdleMaterial : MaterialFactory.Create(Sun, 0.6f, Sun * 0.9f);
+            overheadMaterial = overheadMaterial ? overheadMaterial : MaterialFactory.Create(NeonCyan, 0.7f, NeonCyan * 2f);
+            blockMaterial = blockMaterial ? blockMaterial : MaterialFactory.Create(NeonPink, 0.75f, NeonPink * 1.3f);
+            coinMaterial = coinMaterial ? coinMaterial : MaterialFactory.Create(Sun, 0.95f, Sun * 1.8f);
             buildingMaterial = buildingMaterial ? buildingMaterial : MaterialFactory.Create(Color.white, 0.3f);
         }
     }
@@ -353,7 +685,16 @@ namespace WorldRush.Runtime
             {
                 m.EnableKeyword("_EMISSION");
                 m.SetColor("_EmissionColor", emission.Value);
+                m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             }
+            return m;
+        }
+
+        /// <summary>Beidseitig sichtbar (für prozedurale Ringe/Kegel).</summary>
+        public static Material DoubleSided(Material m)
+        {
+            if (m.HasProperty("_Cull")) m.SetFloat("_Cull", 0f);
+            m.doubleSidedGI = true;
             return m;
         }
     }
