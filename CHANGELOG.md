@@ -3,6 +3,8 @@
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
+### Hinzugefügt
+- Echte 3D-Figuren: Modell in `Assets/_WorldRush/Resources/Characters` ablegen → wird automatisch skaliert, animiert (Laufen/Springen/Idle) und nach Outfit-Text eingefärbt. Ohne Modell bleibt die Platzhalter-Figur.
 
 ## [0.2.0] – 2026-11-14
 ### Bestätigt

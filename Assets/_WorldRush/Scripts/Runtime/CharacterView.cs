@@ -6,18 +6,29 @@ using WorldRush.Core.Outfits;
 namespace WorldRush.Runtime
 {
     /// <summary>
-    /// Eigene, niedliche Spielfigur aus Grundformen (Platzhalter bis zum professionellen 3D-Modell in M2):
-    /// großer Kopf, große Augen, Haare mit Zopf, Kleid oder Shirt+Hose, Schuhe, Lauf-Animation.
-    /// Farben kommen aus dem Outfit-Text ("Blonde Haare, rotes Kleid, braune Schuhe").
+    /// Spielfigur. Liegt ein echtes 3D-Modell in Resources/Characters, wird dieses verwendet
+    /// (skaliert, animiert, nach Outfit-Text eingefärbt). Sonst entsteht eine Platzhalter-Figur aus Grundformen.
     /// </summary>
     public sealed class CharacterView
     {
         public Transform Root { get; }
-        private readonly Transform _body, _legL, _legR, _armL, _armR, _tail;
-        private readonly GameObject _dress, _torso, _pantsL, _pantsR, _cap, _board;
+        public bool UsesModel => _model != null;
+
+        private readonly Transform _body;
+        private readonly GameObject _board;
         private readonly Transform _shield;
-        private readonly Material _skin, _hair, _dressMat, _top, _pants, _shoes, _capMat;
         private float _phase;
+
+        // Echtes Modell
+        private readonly GameObject _model;
+        private readonly Animation _animation;
+        private readonly Renderer[] _modelRenderers;
+        private string _runClip, _idleClip, _jumpClip, _slideClip, _current;
+
+        // Platzhalter
+        private Transform _legL, _legR, _armL, _armR, _tail;
+        private GameObject _dress, _torso, _pantsL, _pantsR, _cap;
+        private Material _skin, _hair, _dressMat, _top, _pants, _shoes, _capMat;
 
         public static readonly Dictionary<string, Color> Palette = new Dictionary<string, Color>
         {
@@ -27,6 +38,17 @@ namespace WorldRush.Runtime
             { "silver", Hex("#d6d8e6") }, { "gold", Hex("#e3b23c") }, { "beige", Hex("#e8d3b0") }
         };
 
+        /// <summary>Schlüsselwörter in Material-/Objektnamen, um Outfit-Farben auf echte Modelle zu übertragen.</summary>
+        private static readonly Dictionary<OutfitSlot, string[]> SlotKeywords = new Dictionary<OutfitSlot, string[]>
+        {
+            { OutfitSlot.Hair, new[] { "hair", "haar" } },
+            { OutfitSlot.Dress, new[] { "dress", "kleid", "skirt" } },
+            { OutfitSlot.Top, new[] { "shirt", "top", "jacket", "hoodie", "torso", "cloth" } },
+            { OutfitSlot.Bottom, new[] { "pant", "trouser", "jean", "short" } },
+            { OutfitSlot.Shoes, new[] { "shoe", "boot", "sneaker", "feet", "foot" } },
+            { OutfitSlot.Accessory, new[] { "hat", "cap", "helmet" } },
+        };
+
         public CharacterView(Transform parent)
         {
             Root = new GameObject("Character").transform;
@@ -34,6 +56,206 @@ namespace WorldRush.Runtime
             _body = new GameObject("Body").transform;
             _body.SetParent(Root, false);
 
+            var prefab = FindModel();
+            if (prefab != null)
+            {
+                _model = Object.Instantiate(prefab, _body, false);
+                _model.name = "Model";
+                FitToHeight(_model, 2.0f);
+                _modelRenderers = _model.GetComponentsInChildren<Renderer>(true);
+                foreach (var r in _modelRenderers)
+                {
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                    r.materials = r.materials; // eigene Instanzen, damit Outfit-Farben nur diese Figur betreffen
+                }
+                _animation = _model.GetComponentInChildren<Animation>();
+                PickClips();
+            }
+            else
+            {
+                BuildPlaceholder();
+            }
+
+            var boardMat = MaterialFactory.Create(Hex("#3de8ff"), 0.9f, Hex("#3de8ff") * 2.2f);
+            _board = Part(PrimitiveType.Cube, Root, boardMat, new Vector3(0, -0.05f, 0), new Vector3(0.9f, 0.09f, 2.1f));
+            _board.SetActive(false);
+
+            _shield = new GameObject("Shield").transform;
+            _shield.SetParent(Root, false);
+            _shield.localPosition = new Vector3(0, 1.1f, 0);
+            var shieldMat = MaterialFactory.DoubleSided(MaterialFactory.Create(Hex("#9b8cff"), 0.9f, Hex("#9b8cff") * 2.5f));
+            for (int i = 0; i < 3; i++)
+            {
+                var ring = new GameObject("Ring" + i);
+                ring.transform.SetParent(_shield, false);
+                ring.transform.localRotation = Quaternion.Euler(i * 60f, i * 45f, 0f);
+                ring.AddComponent<MeshFilter>().sharedMesh = MeshFactory.Ring(1.2f, 0.035f, 48);
+                ring.AddComponent<MeshRenderer>().sharedMaterial = shieldMat;
+            }
+            _shield.gameObject.SetActive(false);
+        }
+
+        private static GameObject FindModel()
+        {
+            var all = Resources.LoadAll<GameObject>("Characters");
+            foreach (var go in all)
+                if (go != null && go.GetComponentInChildren<Renderer>(true) != null) return go;
+            return null;
+        }
+
+        private static void FitToHeight(GameObject go, float height)
+        {
+            var renderers = go.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) return;
+            var b = renderers[0].bounds;
+            foreach (var r in renderers) b.Encapsulate(r.bounds);
+            if (b.size.y < 0.01f) return;
+            go.transform.localScale *= height / b.size.y;
+            b = renderers[0].bounds;
+            foreach (var r in renderers) b.Encapsulate(r.bounds);
+            var anchor = go.transform.parent != null ? go.transform.parent.position : Vector3.zero;
+            go.transform.position += new Vector3(anchor.x - b.center.x, anchor.y - b.min.y, anchor.z - b.center.z);
+        }
+
+        private void PickClips()
+        {
+            if (_animation == null) return;
+            foreach (AnimationState state in _animation)
+            {
+                string n = state.name.ToLowerInvariant();
+                if (_runClip == null && (n.Contains("run") || n.Contains("sprint"))) _runClip = state.name;
+                else if (_idleClip == null && n.Contains("idle")) _idleClip = state.name;
+                else if (_jumpClip == null && n.Contains("jump")) _jumpClip = state.name;
+                else if (_slideClip == null && (n.Contains("slide") || n.Contains("roll") || n.Contains("crouch") || n.Contains("duck"))) _slideClip = state.name;
+            }
+            if (_runClip == null)
+                foreach (AnimationState state in _animation)
+                    if (state.name.ToLowerInvariant().Contains("walk")) { _runClip = state.name; break; }
+        }
+
+        private void Play(string clip, float speed = 1f)
+        {
+            if (_animation == null || clip == null) return;
+            var state = _animation[clip];
+            if (state != null) state.speed = speed;
+            if (_current == clip) return;
+            _animation.CrossFade(clip, 0.12f);
+            _current = clip;
+        }
+
+        /// <summary>Wendet einen Outfit-Text an. Gibt kurze Rückmeldungen auf Deutsch zurück.</summary>
+        public List<string> ApplyOutfit(string text)
+        {
+            var feedback = new List<string>();
+            var parsed = OutfitTextParser.Parse(text);
+            var matched = OutfitCatalog.CreateStarter().Match(parsed);
+
+            if (!UsesModel)
+            {
+                bool hasDress = parsed.Find(OutfitSlot.Dress) != null;
+                bool hasSeparates = parsed.Find(OutfitSlot.Top) != null || parsed.Find(OutfitSlot.Bottom) != null;
+                bool useDress = hasDress || (!hasSeparates && _dress.activeSelf);
+                _dress.SetActive(useDress);
+                _torso.SetActive(!useDress);
+                _pantsL.SetActive(!useDress);
+                _pantsR.SetActive(!useDress);
+                _cap.SetActive(false);
+            }
+
+            foreach (var choice in matched)
+            {
+                if (choice.Item == null) { feedback.Add("Nicht im Katalog: " + SlotName(choice.Wish.Slot)); continue; }
+                bool colored = choice.Color != null && Palette.TryGetValue(choice.Color, out var color) && Recolor(choice.Wish.Slot, color);
+                string note = choice.Quality == MatchQuality.Exact ? "" : " (Ersatz)";
+                if (UsesModel && choice.Color != null && !colored) note = " (an diesem Modell nicht färbbar)";
+                feedback.Add($"{SlotName(choice.Wish.Slot)}: {ColorName(choice.Color)}{note}");
+            }
+            foreach (var w in parsed.UnknownWords) if (feedback.Count < 6) feedback.Add("Unbekannt: " + w);
+            return feedback;
+        }
+
+        private bool Recolor(OutfitSlot slot, Color color)
+        {
+            if (!UsesModel)
+            {
+                Material target = slot switch
+                {
+                    OutfitSlot.Hair => _hair,
+                    OutfitSlot.Dress => _dressMat,
+                    OutfitSlot.Top => _top,
+                    OutfitSlot.Bottom => _pants,
+                    OutfitSlot.Shoes => _shoes,
+                    _ => _capMat
+                };
+                if (slot == OutfitSlot.Accessory) _cap.SetActive(true);
+                SetColor(target, color);
+                return true;
+            }
+
+            bool any = false;
+            var keys = SlotKeywords[slot];
+            foreach (var r in _modelRenderers)
+            {
+                string objName = r.name.ToLowerInvariant();
+                foreach (var m in r.materials)
+                {
+                    string matName = m.name.ToLowerInvariant();
+                    foreach (var key in keys)
+                    {
+                        if (!matName.Contains(key) && !objName.Contains(key)) continue;
+                        SetColor(m, color);
+                        any = true;
+                        break;
+                    }
+                }
+            }
+            return any;
+        }
+
+        public void Animate(RunnerMotor motor, bool running, bool hovering, bool shield, float speed, float dt)
+        {
+            _phase += dt * (running ? speed * 0.9f : 2f);
+            bool air = motor.IsJumping || motor.FeetY > 0.05f;
+
+            if (UsesModel)
+            {
+                if (!running) Play(_idleClip ?? _runClip, 1f);
+                else if (motor.IsSliding && _slideClip != null) Play(_slideClip, 1.2f);
+                else if (air && !hovering && _jumpClip != null) Play(_jumpClip, 1.1f);
+                else Play(hovering ? (_idleClip ?? _runClip) : _runClip, Mathf.Clamp(speed / 10f, 0.9f, 1.8f));
+                bool fakeSlide = motor.IsSliding && _slideClip == null;
+                Tilt(fakeSlide ? -70f : 0f, fakeSlide ? 0.25f : 0f, dt);
+            }
+            else
+            {
+                float swing = running && !air && !motor.IsSliding ? Mathf.Sin(_phase) * 50f : air ? 30f : 0f;
+                _legL.localRotation = Quaternion.Euler(swing, 0, 0);
+                _legR.localRotation = Quaternion.Euler(-swing, 0, 0);
+                _armL.localRotation = Quaternion.Euler(-swing * 0.8f, 0, 0);
+                _armR.localRotation = Quaternion.Euler(swing * 0.8f, 0, 0);
+                _tail.localRotation = Quaternion.Euler(25f + Mathf.Sin(_phase * 2f) * 15f, 0, 0);
+                float bob = running && !air && !motor.IsSliding ? Mathf.Abs(Mathf.Cos(_phase)) * 0.06f : 0f;
+                Tilt(motor.IsSliding ? -70f : 0f, motor.IsSliding ? 0.25f : bob, dt);
+            }
+
+            _board.SetActive(hovering);
+            if (hovering) _board.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 5f) * 5f);
+            _shield.gameObject.SetActive(shield);
+            if (shield) _shield.Rotate(0f, 120f * dt, 40f * dt, Space.Self);
+        }
+
+        private void Tilt(float targetTilt, float y, float dt)
+        {
+            var e = _body.localEulerAngles;
+            float current = e.x > 180f ? e.x - 360f : e.x;
+            _body.localRotation = Quaternion.Euler(Mathf.Lerp(current, targetTilt, Mathf.Min(1f, dt * 18f)), 0, 0);
+            _body.localPosition = new Vector3(0, y, 0);
+        }
+
+        // ---------- Platzhalter-Figur (nur ohne echtes Modell) ----------
+
+        private void BuildPlaceholder()
+        {
             _skin = MaterialFactory.Create(Hex("#f2c2a0"), 0.35f);
             _hair = MaterialFactory.Create(Hex("#f5d36b"), 0.55f);
             _dressMat = MaterialFactory.DoubleSided(MaterialFactory.Create(Hex("#e8304a"), 0.45f));
@@ -54,20 +276,16 @@ namespace WorldRush.Runtime
             }
             _pantsL = Part(PrimitiveType.Capsule, _legL, _pants, new Vector3(0, -0.18f, 0), new Vector3(0.2f, 0.26f, 0.2f));
             _pantsR = Part(PrimitiveType.Capsule, _legR, _pants, new Vector3(0, -0.18f, 0), new Vector3(0.2f, 0.26f, 0.2f));
-
             _torso = Part(PrimitiveType.Capsule, _body, _top, new Vector3(0, 1.12f, 0), new Vector3(0.52f, 0.36f, 0.42f));
             _dress = new GameObject("Dress");
             _dress.transform.SetParent(_body, false);
             _dress.transform.localPosition = new Vector3(0, 0.55f, 0);
             _dress.AddComponent<MeshFilter>().sharedMesh = MeshFactory.Cone(0.46f, 0.24f, 0.9f, 24);
             _dress.AddComponent<MeshRenderer>().sharedMaterial = _dressMat;
-
             _armL = Pivot("ArmL", new Vector3(-0.34f, 1.38f, 0f));
             _armR = Pivot("ArmR", new Vector3(0.34f, 1.38f, 0f));
             foreach (var arm in new[] { _armL, _armR })
                 Part(PrimitiveType.Capsule, arm, _skin, new Vector3(0, -0.28f, 0), new Vector3(0.12f, 0.3f, 0.12f));
-
-            // Kopf mit großen Augen (Kindchenschema), Wangen, Haare, Zopf
             Part(PrimitiveType.Sphere, _body, _skin, new Vector3(0, 1.86f, 0), Vector3.one * 0.68f);
             for (int side = -1; side <= 1; side += 2)
             {
@@ -76,110 +294,11 @@ namespace WorldRush.Runtime
                 Part(PrimitiveType.Sphere, _body, blush, new Vector3(side * 0.19f, 1.79f, 0.27f), new Vector3(0.09f, 0.05f, 0.03f));
             }
             Part(PrimitiveType.Sphere, _body, _hair, new Vector3(0, 1.95f, -0.04f), new Vector3(0.74f, 0.6f, 0.72f));
-            Part(PrimitiveType.Sphere, _body, _hair, new Vector3(0, 2.05f, 0.14f), new Vector3(0.62f, 0.22f, 0.4f)); // Pony
+            Part(PrimitiveType.Sphere, _body, _hair, new Vector3(0, 2.05f, 0.14f), new Vector3(0.62f, 0.22f, 0.4f));
             _tail = Pivot("Ponytail", new Vector3(0, 1.95f, -0.32f));
             Part(PrimitiveType.Capsule, _tail, _hair, new Vector3(0, -0.2f, -0.05f), new Vector3(0.16f, 0.24f, 0.16f));
             _cap = Part(PrimitiveType.Cylinder, _body, _capMat, new Vector3(0, 2.2f, 0), new Vector3(0.66f, 0.06f, 0.66f));
             _cap.SetActive(false);
-
-            // Surfboard (nur während des Power-ups sichtbar)
-            var boardMat = MaterialFactory.Create(Hex("#3de8ff"), 0.9f, Hex("#3de8ff") * 2.2f);
-            _board = Part(PrimitiveType.Cube, Root, boardMat, new Vector3(0, -0.05f, 0), new Vector3(0.9f, 0.09f, 2.1f));
-            _board.SetActive(false);
-
-            // Schild: drei leuchtende Ringe, die um die Figur kreisen
-            _shield = new GameObject("Shield").transform;
-            _shield.SetParent(Root, false);
-            _shield.localPosition = new Vector3(0, 1.1f, 0);
-            var shieldMat = MaterialFactory.DoubleSided(MaterialFactory.Create(Hex("#9b8cff"), 0.9f, Hex("#9b8cff") * 2.5f));
-            for (int i = 0; i < 3; i++)
-            {
-                var ring = new GameObject("Ring" + i);
-                ring.transform.SetParent(_shield, false);
-                ring.transform.localRotation = Quaternion.Euler(i * 60f, i * 45f, 0f);
-                ring.AddComponent<MeshFilter>().sharedMesh = MeshFactory.Ring(1.2f, 0.035f, 48);
-                ring.AddComponent<MeshRenderer>().sharedMaterial = shieldMat;
-            }
-            _shield.gameObject.SetActive(false);
-        }
-
-        /// <summary>Wendet einen Outfit-Text an. Gibt kurze Rückmeldungen zurück (z. B. "Kleid: red").</summary>
-        public List<string> ApplyOutfit(string text)
-        {
-            var feedback = new List<string>();
-            var parsed = OutfitTextParser.Parse(text);
-            var matched = OutfitCatalog.CreateStarter().Match(parsed);
-            bool hasDress = parsed.Find(OutfitSlot.Dress) != null;
-            bool hasSeparates = parsed.Find(OutfitSlot.Top) != null || parsed.Find(OutfitSlot.Bottom) != null;
-            bool useDress = hasDress || (!hasSeparates && _dress.activeSelf);
-            _dress.SetActive(useDress);
-            _torso.SetActive(!useDress);
-            _pantsL.SetActive(!useDress);
-            _pantsR.SetActive(!useDress);
-            _cap.SetActive(false);
-
-            foreach (var choice in matched)
-            {
-                if (choice.Item == null) { feedback.Add("Nicht im Katalog: " + SlotName(choice.Wish.Slot)); continue; }
-                Material target = choice.Wish.Slot switch
-                {
-                    OutfitSlot.Hair => _hair,
-                    OutfitSlot.Dress => _dressMat,
-                    OutfitSlot.Top => _top,
-                    OutfitSlot.Bottom => _pants,
-                    OutfitSlot.Shoes => _shoes,
-                    _ => _capMat
-                };
-                if (choice.Wish.Slot == OutfitSlot.Accessory) _cap.SetActive(true);
-                if (choice.Color != null && Palette.TryGetValue(choice.Color, out var color)) SetColor(target, color);
-                string note = choice.Quality == MatchQuality.Exact ? "" : " (Ersatz)";
-                feedback.Add($"{SlotName(choice.Wish.Slot)}: {ColorName(choice.Color)}{note}");
-            }
-            foreach (var w in parsed.UnknownWords) if (feedback.Count < 6) feedback.Add("Unbekannt: " + w);
-            return feedback;
-        }
-
-        private static string SlotName(OutfitSlot slot) => slot switch
-        {
-            OutfitSlot.Hair => "Haare",
-            OutfitSlot.Dress => "Kleid",
-            OutfitSlot.Top => "Oberteil",
-            OutfitSlot.Bottom => "Hose/Rock",
-            OutfitSlot.Shoes => "Schuhe",
-            _ => "Mütze"
-        };
-
-        private static readonly Dictionary<string, string> GermanColors = new Dictionary<string, string>
-        {
-            { "red", "rot" }, { "blue", "blau" }, { "green", "grün" }, { "yellow", "gelb" }, { "black", "schwarz" },
-            { "white", "weiß" }, { "brown", "braun" }, { "blonde", "blond" }, { "pink", "pink" }, { "purple", "lila" },
-            { "orange", "orange" }, { "grey", "grau" }, { "silver", "silber" }, { "gold", "gold" }, { "beige", "beige" }
-        };
-
-        private static string ColorName(string id) => id != null && GermanColors.TryGetValue(id, out var de) ? de : "-";
-
-        public void Animate(RunnerMotor motor, bool running, bool hovering, bool shield, float speed, float dt)
-        {
-            _phase += dt * (running ? speed * 0.9f : 2f);
-            bool air = motor.IsJumping || motor.FeetY > 0.05f;
-            float swing = running && !air && !motor.IsSliding ? Mathf.Sin(_phase) * 50f : air ? 30f : 0f;
-            _legL.localRotation = Quaternion.Euler(swing, 0, 0);
-            _legR.localRotation = Quaternion.Euler(-swing, 0, 0);
-            _armL.localRotation = Quaternion.Euler(-swing * 0.8f, 0, 0);
-            _armR.localRotation = Quaternion.Euler(swing * 0.8f, 0, 0);
-            _tail.localRotation = Quaternion.Euler(25f + Mathf.Sin(_phase * 2f) * 15f, 0, 0);
-
-            float targetTilt = motor.IsSliding ? -70f : 0f;
-            var e = _body.localEulerAngles;
-            float current = e.x > 180f ? e.x - 360f : e.x;
-            _body.localRotation = Quaternion.Euler(Mathf.Lerp(current, targetTilt, Mathf.Min(1f, dt * 18f)), 0, 0);
-            float bob = running && !air && !motor.IsSliding ? Mathf.Abs(Mathf.Cos(_phase)) * 0.06f : 0f;
-            _body.localPosition = new Vector3(0, motor.IsSliding ? 0.25f : bob, 0);
-
-            _board.SetActive(hovering);
-            if (hovering) _board.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 5f) * 5f);
-            _shield.gameObject.SetActive(shield);
-            if (shield) _shield.Rotate(0f, 120f * dt, 40f * dt, Space.Self);
         }
 
         private Transform Pivot(string name, Vector3 pos)
@@ -205,9 +324,28 @@ namespace WorldRush.Runtime
 
         private static void SetColor(Material m, Color c)
         {
-            m.SetColor("_BaseColor", c);
-            m.SetColor("_Color", c);
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
+            if (m.HasProperty("_Color")) m.SetColor("_Color", c);
         }
+
+        private static string SlotName(OutfitSlot slot) => slot switch
+        {
+            OutfitSlot.Hair => "Haare",
+            OutfitSlot.Dress => "Kleid",
+            OutfitSlot.Top => "Oberteil",
+            OutfitSlot.Bottom => "Hose/Rock",
+            OutfitSlot.Shoes => "Schuhe",
+            _ => "Mütze"
+        };
+
+        private static readonly Dictionary<string, string> GermanColors = new Dictionary<string, string>
+        {
+            { "red", "rot" }, { "blue", "blau" }, { "green", "grün" }, { "yellow", "gelb" }, { "black", "schwarz" },
+            { "white", "weiß" }, { "brown", "braun" }, { "blonde", "blond" }, { "pink", "pink" }, { "purple", "lila" },
+            { "orange", "orange" }, { "grey", "grau" }, { "silver", "silber" }, { "gold", "gold" }, { "beige", "beige" }
+        };
+
+        private static string ColorName(string id) => id != null && GermanColors.TryGetValue(id, out var de) ? de : "-";
 
         public static Color Hex(string hex) => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.magenta;
     }

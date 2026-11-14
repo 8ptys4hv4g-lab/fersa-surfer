@@ -1,0 +1,4 @@
+Lege hier eine 3D-Figur als .fbx (oder .glb mit glTFast) ab, z. B. eine CC0-Figur von quaternius.com.
+Das Spiel nimmt automatisch die erste Figur in diesem Ordner, skaliert sie passend,
+spielt Lauf-/Sprung-/Idle-Animationen und färbt Haare/Kleidung/Schuhe nach dem Outfit-Text.
+Ist hier keine Figur, wird die einfache Platzhalter-Figur gebaut.
