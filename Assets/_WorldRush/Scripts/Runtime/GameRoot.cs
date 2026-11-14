@@ -43,6 +43,9 @@ namespace WorldRush.Runtime
         private AudioSource _sfx, _music;
         private AudioClip _coinClip, _jumpClip, _slideClip, _powerClip, _crashClip;
         private Material _skyMaterial;
+        private Transform _sunDisk;
+        private Material _sunMat;
+        private bool _kitBuildings;
         private float _shake;
 
         private readonly Dictionary<int, GameObject> _rowViews = new Dictionary<int, GameObject>();
@@ -387,17 +390,17 @@ namespace WorldRush.Runtime
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogStartDistance = 50f;
-            RenderSettings.fogEndDistance = 160f;
+            RenderSettings.fogEndDistance = 230f;
 
-            var skyShader = Shader.Find("Skybox/Procedural");
-            if (skyShader != null)
-            {
-                _skyMaterial = new Material(skyShader);
-                _skyMaterial.SetFloat("_SunSize", 0.08f);
-                _skyMaterial.SetFloat("_AtmosphereThickness", 1.6f);
-                _skyMaterial.SetFloat("_Exposure", 1.25f);
-                RenderSettings.skybox = _skyMaterial;
-            }
+            RenderSettings.skybox = null;
+            _sunDisk = GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
+            _sunDisk.name = "SunDisk";
+            Destroy(_sunDisk.GetComponent<Collider>());
+            _sunDisk.SetParent(transform, false);
+            _sunDisk.localScale = Vector3.one * 34f;
+            _sunMat = MaterialFactory.Create(new Color(1f, 0.75f, 0.45f), 0f, new Color(1f, 0.6f, 0.35f) * 2.2f);
+            _sunDisk.GetComponent<Renderer>().sharedMaterial = _sunMat;
+            _sunDisk.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
 
             // Leuchten (Bloom) und kräftige Farben über ein globales URP-Volume
             if (GraphicsSettings.currentRenderPipeline != null)
@@ -443,7 +446,12 @@ namespace WorldRush.Runtime
             RenderSettings.ambientSkyColor = amb;
             RenderSettings.ambientEquatorColor = Color.Lerp(amb, fog, 0.5f);
             RenderSettings.ambientGroundColor = fog * 0.6f;
-            if (_camera != null && _skyMaterial == null) _camera.backgroundColor = fog;
+            if (_camera != null && _skyMaterial == null) _camera.backgroundColor = Color.Lerp(fog, tint, 0.45f);
+            if (_sunDisk != null)
+            {
+                _sunDisk.position = new Vector3(0f, 26f, _session.PlayerZ + 205f);
+                _sunMat.SetColor("_EmissionColor", Color.Lerp(new Color(1f, 0.55f, 0.35f), tint, 0.35f) * 2.2f);
+            }
         }
 
         private void BuildEnvironment()
@@ -503,6 +511,7 @@ namespace WorldRush.Runtime
             {
                 for (int side = -1; side <= 1; side += 2)
                 {
+                    if (_kitBuildings) continue; // echte Stadt: keine Spielzeug-Kugelbäume
                     var tree = new GameObject("Tree").transform;
                     tree.SetParent(transform);
                     MakePrimitive(PrimitiveType.Cylinder, "Trunk", tree, trunk).transform.localScale = new Vector3(0.35f, 0.8f, 0.35f);
@@ -533,6 +542,7 @@ namespace WorldRush.Runtime
             Debug.Log($"[FersaSurfer] Stadt-Modelle: {kit.Buildings.Count} Gebäude, {kit.Props.Count} Deko, {kit.Cars.Count} Autos");
             if (!kit.HasAny) return;
             float half = trackWidth * 0.5f;
+            _kitBuildings = kit.Buildings.Count > 0;
 
             if (kit.Buildings.Count > 0)
             {
@@ -547,7 +557,7 @@ namespace WorldRush.Runtime
                     {
                         var prefab = kit.Buildings[rnd.Range(0, kit.Buildings.Count)];
                         float width = rnd.Range(10f, 15f);
-                        var go = EnvironmentKit.Spawn(prefab, transform, new Vector3(side * (half + 7f + width * 0.5f), 0f, z + width * 0.5f), side < 0 ? 90f : -90f, width, false, 40f);
+                        var go = EnvironmentKit.Spawn(prefab, transform, new Vector3(side * (half + 7f + width * 0.5f), 0f, z + width * 0.5f), side < 0 ? -90f : 90f, width, false, 40f);
                         _scenery.Add(go.transform);
                         z += width + rnd.Range(0.3f, 1.5f);
                     }
@@ -640,7 +650,7 @@ namespace WorldRush.Runtime
                 go.AddComponent<AudioListener>();
             }
             _camera.clearFlags = _skyMaterial != null ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
-            _camera.farClipPlane = 240f;
+            _camera.farClipPlane = 260f;
             _camera.transform.position = new Vector3(2.6f, 2.3f, 4.6f);
             if (GraphicsSettings.currentRenderPipeline != null)
             {
