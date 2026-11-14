@@ -2,6 +2,20 @@
 
 **Stand:** 2026-11-14 · Version 0.2.0 · **M0 + M1 ✅ in Unity bestätigt** · M2/M7 in Arbeit
 
+## Pause – Stand 14.11.2026 (abends)
+**Wo wir stehen:**
+- Unity 6.6 läuft auf dem Windows-PC des Auftraggebers; Projekt unter `D:\Projekte\fersa-surfer`, mit GitHub verbunden (Update: `git -C D:\Projekte\fersa-surfer fetch; git -C D:\Projekte\fersa-surfer reset --hard origin/main`).
+- Echte 3D-Figur (Quaternius „Ultimate Modular Women“, CC0) läuft mit Animation; Figurenauswahl im Startmenü (< >).
+- Stadt-Modelle werden aus `Resources/Environment` geladen. Mit **Cartoon City Free** (Asset Store) erscheinen sie noch **pink** (Material-/Shader-Inkompatibilität); Ursache nicht abschließend geklärt, weil kein Console-Log vorlag. Diagnose-Logs (`Material umgewandelt: … (Shader '…')`) und Versionslabel `v0.2.0-mat3` sind eingebaut.
+- HAON SD (Unity-chan/Misaki/Yuko) wird **nicht** verwendet: fremde Marken-Figuren mit eigener Lizenz.
+- Fremde Pakete sind per `.gitignore` von GitHub ausgeschlossen (Lizenzschutz).
+
+**Nächste Schritte beim Wiedereinstieg:**
+1. Console-Screenshot nach ▶ holen → Shader-Namen der pinken Materialien → gezielt umwandeln, oder Unitys Render Pipeline Converter (Built-in → URP, Material Upgrade) ausführen.
+2. Alternativ zur Quaternius-Stadt zurück (lief ohne Pink).
+3. Neue Spielidee umsetzen (vom Auftraggeber gewählt): Levels mit Ziel + 3 Sternen, Surf-Abschnitte auf Wasser mit Salto-Tricks.
+4. Ehrliche Einordnung: Ein „moderner“ Look braucht professionelle Grafik (Asset-Paket ca. 50–150 € oder 3D-Künstler).
+
 ## Update 0.2.0 (14.11.2026)
 - ✅ **M0 + M1 bestätigt:** Projekt öffnet in Unity 6.6 (6000.6.9f1) unter Windows ohne Fehler; Spiel läuft im Play-Modus (vom Auftraggeber geprüft).
 - Input-System-Paket entfernt (inkompatibel mit 6.6) → Steuerung über eingebauten Input Manager.
