@@ -18,6 +18,10 @@ namespace WorldRush.Runtime
         private readonly GameObject _board;
         private readonly Transform _shield;
         private float _phase;
+        private float _flip;
+
+        /// <summary>Salto-Animation starten.</summary>
+        public void Trick() => _flip = 1f;
 
         // Echtes Modell
         private readonly GameObject _model;
@@ -307,6 +311,12 @@ namespace WorldRush.Runtime
                 Tilt(motor.IsSliding ? -70f : 0f, motor.IsSliding ? 0.25f : bob, dt);
             }
 
+            if (_flip > 0f)
+            {
+                _flip = Mathf.Max(0f, _flip - dt * 2.4f);
+                _body.localRotation = Quaternion.Euler(-(1f - _flip) * 360f, 0f, 0f);
+            }
+
             _board.SetActive(hovering);
             if (hovering) _board.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 5f) * 5f);
             _shield.gameObject.SetActive(shield);
@@ -442,6 +452,29 @@ namespace WorldRush.Runtime
             v.Add(Vector3.zero);
             for (int i = 0; i < segments; i++) t.AddRange(new[] { center, i * 2 + 2, i * 2 });
             var mesh = new Mesh { name = "Cone" };
+            mesh.SetVertices(v);
+            mesh.SetTriangles(t, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        /// <summary>Flaches Gitter (für Wasser mit Wellen). Ursprung vorne in der Mitte, Länge entlang +Z.</summary>
+        public static Mesh Grid(float width, float length, int nx, int nz)
+        {
+            var v = new List<Vector3>((nx + 1) * (nz + 1));
+            var t = new List<int>(nx * nz * 6);
+            for (int j = 0; j <= nz; j++)
+                for (int i = 0; i <= nx; i++)
+                    v.Add(new Vector3(-width * 0.5f + width * i / nx, 0f, length * j / nz));
+            for (int j = 0; j < nz; j++)
+                for (int i = 0; i < nx; i++)
+                {
+                    int a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1;
+                    t.AddRange(new[] { a, c, b, b, c, d });
+                }
+            var mesh = new Mesh { name = "Grid", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+            mesh.MarkDynamic();
             mesh.SetVertices(v);
             mesh.SetTriangles(t, 0);
             mesh.RecalculateNormals();

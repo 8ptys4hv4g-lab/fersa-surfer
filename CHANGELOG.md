@@ -4,6 +4,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen na
 
 ## [Unveröffentlicht]
 ### Hinzugefügt
+- Neue Spielidee: Levels mit Ziellinie und bis zu 3 Sternen, Surf-Abschnitte auf Wasser mit Wellen, Salto-Trick in der Luft, Level-Auswahl, Fortschrittsbalken, Sieg-Bildschirm (Kern: 9 neue Tests, 114 gesamt).
+### Hinzugefügt
 - Echte Stadt-Modelle aus `Resources/Environment/{Buildings,Props,Cars}`: Häuserreihen, parkende Autos, Deko; Gehwege und Parkstreifen; Neon-Hochhäuser als Skyline.
 ### Hinzugefügt
 - Figurenauswahl im Startmenü (< >), Figuren auch aus Unterordnern; Menü „3. 3D-Figuren neu importieren“.

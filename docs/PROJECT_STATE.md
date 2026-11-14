@@ -13,7 +13,7 @@
 **Nächste Schritte beim Wiedereinstieg:**
 1. Console-Screenshot nach ▶ holen → Shader-Namen der pinken Materialien → gezielt umwandeln, oder Unitys Render Pipeline Converter (Built-in → URP, Material Upgrade) ausführen.
 2. Alternativ zur Quaternius-Stadt zurück (lief ohne Pink).
-3. Neue Spielidee umsetzen (vom Auftraggeber gewählt): Levels mit Ziel + 3 Sternen, Surf-Abschnitte auf Wasser mit Salto-Tricks.
+3. ✅ Neue Spielidee umgesetzt (Kern getestet, Unity-Teil ungeprüft): Levels mit Ziel + 3 Sternen, Surf-Abschnitte, Salto.
 4. Ehrliche Einordnung: Ein „moderner“ Look braucht professionelle Grafik (Asset-Paket ca. 50–150 € oder 3D-Künstler).
 
 ## Update 0.2.0 (14.11.2026)

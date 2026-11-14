@@ -8,7 +8,9 @@ namespace WorldRush.Core
         Ready = 0,
         Running,
         Paused,
-        GameOver
+        GameOver,
+        /// <summary>Ziellinie eines Levels erreicht.</summary>
+        Won
     }
 
     /// <summary>
@@ -29,9 +31,10 @@ namespace WorldRush.Core
         private DeterministicRandom _random;
         private int _nextSkyCoinId;
 
-        public GameSession(RunnerConfig config, int seed, int highScore = 0)
+        public GameSession(RunnerConfig config, int seed, int highScore = 0, LevelDefinition level = null)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            Level = level;
             Motor = new RunnerMotor(config);
             Score = new ScoreService(config, highScore);
             Seed = seed;
@@ -47,6 +50,25 @@ namespace WorldRush.Core
         public event Action<ObstacleRow> ShieldUsed;
         /// <summary>Neuer Combo-Multiplikator erreicht (2, 3, ...).</summary>
         public event Action<int> ComboMilestone;
+        /// <summary>Salto beim Surfen (erhaltene Punkte).</summary>
+        public event Action<int> TrickPerformed;
+
+        /// <summary>Aktuelles Level oder null für den Endlos-Modus.</summary>
+        public LevelDefinition Level { get; private set; }
+        public bool IsInWater => Level != null && Level.IsWater(PlayerZ);
+        public int Tricks { get; private set; }
+        public int LevelCoinsTotal { get; private set; }
+        public float LevelProgress => Level == null ? 0f : Math.Min(1f, PlayerZ / Level.Length);
+        public int Stars => LevelDefinition.StarsFor(Score.Coins, LevelCoinsTotal);
+        private bool _trickUsed;
+
+        /// <summary>Wechselt das Level (setzt die Runde zurück).</summary>
+        public void SetLevel(LevelDefinition level)
+        {
+            Level = level;
+            ResetWorld(Seed);
+            SetState(GameState.Ready);
+        }
 
         public RunnerConfig Config => _config;
         public RunnerMotor Motor { get; }
@@ -131,7 +153,12 @@ namespace WorldRush.Core
         {
             if (State != GameState.Running || deltaTime <= 0f) return;
 
-            while (_pending.Count > 0) Motor.Apply(_pending.Dequeue());
+            while (_pending.Count > 0)
+            {
+                var cmd = _pending.Dequeue();
+                if (cmd == RunnerCommand.Jump && IsInWater && Motor.IsJumping && !_trickUsed) { DoTrick(); continue; }
+                Motor.Apply(cmd);
+            }
 
             float remaining = Math.Min(deltaTime, _config.MaxFrameDelta);
             while (remaining > 0f && State == GameState.Running)
@@ -152,8 +179,16 @@ namespace WorldRush.Core
             float moved = Speed * dt;
             PlayerZ += moved;
             Score.AddDistance(moved);
+            if (!Motor.IsJumping) _trickUsed = false;
 
-            _generator.GenerateUntil(PlayerZ + _config.GenerateAheadDistance, Speed, _rows, _coins, _powerUps);
+            if (Level != null && PlayerZ >= Level.Length)
+            {
+                Score.CommitHighScore();
+                SetState(GameState.Won);
+                return;
+            }
+
+            Generate();
 
             float x = Motor.LateralX;
             float feet = Motor.FeetY;
@@ -207,6 +242,24 @@ namespace WorldRush.Core
             _rows.RemoveAll(r => r.Z < cleanupZ);
             _coins.RemoveAll(c => c.Z < cleanupZ || c.Collected);
             _powerUps.RemoveAll(p => p.Z < cleanupZ || p.Collected);
+        }
+
+        private void Generate()
+        {
+            float until = PlayerZ + _config.GenerateAheadDistance;
+            if (Level != null) until = Math.Min(until, Level.Length - LevelDefinition.FinishClearance);
+            int before = _coins.Count;
+            _generator.GenerateUntil(until, Speed, _rows, _coins, _powerUps);
+            LevelCoinsTotal += _coins.Count - before;
+        }
+
+        private void DoTrick()
+        {
+            _trickUsed = true;
+            Tricks++;
+            int points = 100 * ComboMultiplier * (IsPowerActive(PowerUpKind.Double) ? 2 : 1);
+            Score.AddBonus(points);
+            TrickPerformed?.Invoke(points);
         }
 
         private void TickTimers(float dt)
@@ -271,10 +324,13 @@ namespace WorldRush.Core
             ComboTimer = 0f;
             Invulnerable = 0f;
             _nextSkyCoinId = 0;
+            Tricks = 0;
+            LevelCoinsTotal = 0;
+            _trickUsed = false;
             Speed = _config.StartSpeed;
             _random = new DeterministicRandom(unchecked(seed * 31 + 7));
             _generator = new TrackGenerator(_config, seed);
-            _generator.GenerateUntil(_config.GenerateAheadDistance, Speed, _rows, _coins, _powerUps);
+            Generate();
         }
 
         private void SetState(GameState state)

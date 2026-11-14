@@ -44,6 +44,12 @@ namespace WorldRush.Core
             return points;
         }
 
+        /// <summary>Extrapunkte, z. B. für Tricks.</summary>
+        public void AddBonus(int points)
+        {
+            if (points > 0) Bonus += points;
+        }
+
         /// <summary>Am Rundenende aufrufen. Gibt true zurück, wenn ein neuer Bestwert erreicht wurde.</summary>
         public bool CommitHighScore()
         {

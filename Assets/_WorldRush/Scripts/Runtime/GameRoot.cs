@@ -79,13 +79,21 @@ namespace WorldRush.Runtime
             _save = _saveRepo.Load();
 
             int startSeed = seed != 0 ? seed : System.Environment.TickCount;
-            _session = new GameSession(RunnerConfig.CreateDefault(), startSeed, _save.HighScore);
+            _levelIndex = Mathf.Clamp(PlayerPrefs.GetInt("fs-level", 0), 0, UnlockedLevels);
+            _session = new GameSession(RunnerConfig.CreateDefault(), startSeed, _save.HighScore, LevelDefinition.Create(_levelIndex));
             _session.StateChanged += OnStateChanged;
             _session.CoinCollected += OnCoin;
             _session.PowerUpActivated += OnPowerUp;
             _session.ShieldUsed += OnShieldUsed;
             _session.ComboMilestone += m => _hud?.Popup("Combo ×" + m + "!", Sun);
             _session.Crashed += (row, kind) => OnCrash();
+            _session.TrickPerformed += p =>
+            {
+                _character.Trick();
+                _sfx.PlayOneShot(_powerClip, 0.7f);
+                Burst(_player.position + Vector3.up * 1.4f, NeonCyan, 30);
+                _hud?.Popup("Salto! +" + p, NeonCyan);
+            };
             _input = new RunnerInput();
 
             BuildAtmosphere();
@@ -94,6 +102,7 @@ namespace WorldRush.Runtime
             BuildCamera();
             BuildParticles();
             BuildAudio();
+            BuildLevelView();
 
             _hud = gameObject.AddComponent<HudOverlay>();
             _hud.Init(this);
@@ -135,6 +144,9 @@ namespace WorldRush.Runtime
                 case GameState.GameOver:
                     if (_input.ConfirmPressed) Restart();
                     break;
+                case GameState.Won:
+                    if (_input.ConfirmPressed) NextLevel();
+                    break;
                 case GameState.Running:
                     foreach (var c in commands)
                     {
@@ -148,6 +160,7 @@ namespace WorldRush.Runtime
 
             UpdateMusic();
             SyncViews();
+            UpdateLevelView();
             UpdateSky();
         }
 
@@ -181,7 +194,16 @@ namespace WorldRush.Runtime
         private void OnStateChanged(GameState state)
         {
             if (state == GameState.Running && !_music.isPlaying) _music.Play();
-            if (state != GameState.GameOver) return;
+            if (state == GameState.Won)
+            {
+                int stars = _session.Stars;
+                if (stars > LevelStars(_levelIndex)) PlayerPrefs.SetInt("fs-stars-" + _levelIndex, stars);
+                PlayerPrefs.Save();
+                _music.Stop();
+                _sfx.PlayOneShot(_powerClip, 1f);
+                Burst(_player.position + Vector3.up * 2f, Sun, 120);
+            }
+            if (state != GameState.GameOver && state != GameState.Won) return;
             _save.RunsPlayed++;
             _save.TotalCoins += _session.Score.Coins;
             _save.HighScore = Mathf.Max(_save.HighScore, _session.Score.HighScore);
@@ -233,10 +255,11 @@ namespace WorldRush.Runtime
         {
             var cfg = _session.Config;
             var motor = _session.Motor;
-            _player.position = new Vector3(motor.LateralX, motor.FeetY, _session.PlayerZ);
+            float lift = _session.IsInWater && !motor.IsHovering ? 0.5f + WaveHeight(_session.PlayerZ, motor.LateralX, Time.time) : 0f;
+            _player.position = new Vector3(motor.LateralX, motor.FeetY + lift, _session.PlayerZ);
             _player.rotation = Quaternion.Euler(0f, 0f, (Lanes.ToX(motor.TargetLane, cfg.LaneWidth) - motor.LateralX) * -4f);
             bool running = _session.State == GameState.Running;
-            _character.Animate(motor, running, motor.IsHovering, _session.IsPowerActive(PowerUpKind.Shield), _session.Speed, Time.deltaTime);
+            _character.Animate(motor, running, motor.IsHovering || _session.IsInWater, _session.IsPowerActive(PowerUpKind.Shield), _session.Speed, Time.deltaTime);
             bool blink = running && _session.Invulnerable > 0f && !motor.IsHovering && Mathf.FloorToInt(Time.time * 11f) % 2 == 0;
             _character.Root.gameObject.SetActive(!blink);
             if (running && motor.IsHovering && Random.value < 0.6f) Burst(_player.position - Vector3.forward * 0.9f, NeonCyan, 1);
@@ -314,11 +337,35 @@ namespace WorldRush.Runtime
         {
             var root = new GameObject("Row " + row.Id);
             root.transform.position = new Vector3(0f, 0f, row.Z);
+            bool water = _session.Level != null && _session.Level.IsWater(row.Z);
             for (int lane = Lanes.Left; lane <= Lanes.Right; lane++)
             {
                 var kind = row.At(lane);
                 if (kind == ObstacleKind.None) continue;
                 float x = Lanes.ToX(lane, cfg.LaneWidth);
+                if (water)
+                {
+                    if (kind == ObstacleKind.Block)
+                    {
+                        var rock = MakePrimitive(PrimitiveType.Sphere, "Rock", root.transform, _rockMat);
+                        rock.transform.localPosition = new Vector3(x, 1.3f, 0f);
+                        rock.transform.localScale = new Vector3(2.1f, 2.9f, 1.8f);
+                        rock.transform.localRotation = Quaternion.Euler(10f * lane, 25f * lane, 8f);
+                    }
+                    else if (kind == ObstacleKind.Hurdle)
+                    {
+                        var wave = MakePrimitive(PrimitiveType.Capsule, "Wave", root.transform, _foamMat);
+                        wave.transform.localPosition = new Vector3(x, 0.55f, 0f);
+                        wave.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                        wave.transform.localScale = new Vector3(0.9f, 1.05f, 0.9f);
+                    }
+                    else
+                    {
+                        Box(root.transform, _woodMat, new Vector3(x, cfg.OverheadBottom + 0.2f, 0f), new Vector3(2.3f, 0.4f, 0.7f));
+                        for (int s = -1; s <= 1; s += 2) Box(root.transform, _woodMat, new Vector3(x + s * 1.1f, (cfg.OverheadBottom + 0.4f) * 0.5f, 0f), new Vector3(0.25f, cfg.OverheadBottom + 0.4f, 0.25f));
+                    }
+                    continue;
+                }
                 CollisionRules.GetVerticalRange(cfg, kind, out float bottom, out float top);
                 float w = cfg.ObstacleHalfWidth * 2f, d = cfg.ObstacleHalfDepth * 2f;
                 if (kind == ObstacleKind.Hurdle)
@@ -657,6 +704,101 @@ namespace WorldRush.Runtime
                     mats[i] = styled;
                 }
                 r.sharedMaterials = mats;
+            }
+        }
+
+        // ---------- Level: Wasser, Ziel, Auswahl ----------
+
+        private int _levelIndex;
+        private GameObject _levelRoot;
+        private Material _rockMat, _foamMat, _woodMat, _waterMat;
+        private readonly List<(Mesh mesh, Vector3[] baseVertices, Transform transform)> _waters = new List<(Mesh, Vector3[], Transform)>();
+
+        public int LevelIndex => _levelIndex;
+        public string LevelLabel => $"Level {_levelIndex + 1} · {_session.Level?.Name}";
+        public static int LevelStars(int index) => PlayerPrefs.GetInt("fs-stars-" + index, 0);
+        public static int UnlockedLevels { get { int u = 0; while (LevelStars(u) > 0 && u < 999) u++; return u; } }
+        public bool CanGoNextLevel => _levelIndex < UnlockedLevels;
+
+        public static float WaveHeight(float z, float x, float t) => 0.16f * Mathf.Sin(z * 0.32f + t * 2.2f) + 0.07f * Mathf.Sin(x * 0.6f + t * 3.1f);
+
+        public void ChangeLevel(int direction)
+        {
+            int target = Mathf.Clamp(_levelIndex + direction, 0, UnlockedLevels);
+            if (target == _levelIndex) return;
+            SetLevel(target);
+        }
+
+        public void NextLevel()
+        {
+            SetLevel(Mathf.Min(_levelIndex + 1, UnlockedLevels));
+            _session.Start();
+        }
+
+        private void SetLevel(int index)
+        {
+            _levelIndex = index;
+            PlayerPrefs.SetInt("fs-level", index);
+            ClearViews();
+            _session.SetLevel(LevelDefinition.Create(index));
+            BuildLevelView();
+        }
+
+        private void BuildLevelView()
+        {
+            if (_levelRoot != null) Destroy(_levelRoot);
+            _waters.Clear();
+            _levelRoot = new GameObject("Level");
+            _levelRoot.transform.SetParent(transform, false);
+            _rockMat ??= MaterialFactory.Create(new Color(0.42f, 0.44f, 0.56f), 0.2f);
+            _foamMat ??= MaterialFactory.Create(new Color(0.88f, 0.97f, 1f), 0.5f, new Color(0.2f, 0.55f, 0.7f));
+            _woodMat ??= MaterialFactory.Create(new Color(0.62f, 0.4f, 0.24f), 0.3f);
+            _waterMat ??= MaterialFactory.Create(new Color(0.08f, 0.42f, 0.84f), 0.93f, new Color(0.02f, 0.1f, 0.3f));
+            var level = _session.Level;
+            if (level == null) return;
+
+            foreach (var (start, end) in level.Water)
+            {
+                float length = end - start;
+                var mesh = MeshFactory.Grid(60f, length, 40, Mathf.CeilToInt(length / 1.5f));
+                var go = new GameObject("Water");
+                go.transform.SetParent(_levelRoot.transform, false);
+                go.transform.position = new Vector3(0f, 0.45f, start);
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                go.AddComponent<MeshRenderer>().sharedMaterial = _waterMat;
+                _waters.Add((mesh, mesh.vertices, go.transform));
+                foreach (var z in new[] { start, end }) Box(_levelRoot.transform, _foamMat, new Vector3(0f, 0.5f, z), new Vector3(60f, 0.3f, 0.8f));
+            }
+
+            // Ziel-Tor mit Schachbrett-Banner
+            var post = MaterialFactory.Create(Color.white, 0.6f, NeonCyan * 1.5f);
+            for (int s = -1; s <= 1; s += 2) Box(_levelRoot.transform, post, new Vector3(s * 5.6f, 3f, level.Length), new Vector3(0.6f, 6f, 0.6f));
+            var checker = new Texture2D(16, 2) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
+            for (int y = 0; y < 2; y++) for (int x = 0; x < 16; x++) checker.SetPixel(x, y, (x + y) % 2 == 0 ? Color.white : new Color(0.1f, 0.08f, 0.19f));
+            checker.Apply();
+            var bannerMat = MaterialFactory.Create(Color.white, 0.3f, Color.white * 0.4f);
+            bannerMat.SetTexture("_BaseMap", checker);
+            bannerMat.SetTexture("_MainTex", checker);
+            bannerMat.SetTexture("_EmissionMap", checker);
+            Box(_levelRoot.transform, bannerMat, new Vector3(0f, 5.6f, level.Length), new Vector3(11.8f, 1.6f, 0.3f));
+        }
+
+        private void UpdateLevelView()
+        {
+            float t = Time.time;
+            foreach (var (mesh, baseVertices, tr) in _waters)
+            {
+                if (Mathf.Abs(tr.position.z - _session.PlayerZ) > 260f) continue;
+                var verts = new Vector3[baseVertices.Length];
+                float z0 = tr.position.z;
+                for (int i = 0; i < verts.Length; i++)
+                {
+                    var v = baseVertices[i];
+                    v.y = WaveHeight(z0 + v.z, v.x, t);
+                    verts[i] = v;
+                }
+                mesh.vertices = verts;
+                mesh.RecalculateNormals();
             }
         }
 
