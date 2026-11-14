@@ -4,6 +4,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen na
 
 ## [Unveröffentlicht]
 ### Hinzugefügt (Web-Vorschau)
+- Power-ups (Surfboard, Magnet, Schild, 2×), Combo-Multiplikator, Partikel, Speed-Linien, Tag-Nacht-Zyklus, live erzeugte Musik + Soundeffekte.
+- Grafik-Upgrade: Toon-Shading, Bloom-Leuchten, Figur mit großem Kopf, Augen und Comic-Konturen.
 - Spielbare Browser-Version mit Welt-Editor: zeichnen → echte 3D-Häuser, Bäume, Seen, Gärten; Strecke bleibt automatisch frei.
 
 ### Hinzugefügt
