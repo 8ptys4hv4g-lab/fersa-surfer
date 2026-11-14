@@ -58,6 +58,13 @@ p{margin:0;line-height:1.5;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-family:var(--display);font-size:18px;
   background:var(--card);border:1px solid var(--line);padding:8px 18px;border-radius:999px;z-index:4;pointer-events:none;opacity:0;transition:opacity .25s}
 .toast.show{opacity:1}
+.card.wide{width:min(760px,100%)}
+.ed-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.brushes{display:flex;gap:6px;flex-wrap:wrap}
+.brushes button{font-family:var(--display);font-weight:600;font-size:15px;border-radius:999px;padding:8px 14px;cursor:pointer;color:var(--ink);background:rgba(0,0,0,.25);border:1px solid var(--line)}
+.brushes button[aria-pressed="true"]{background:var(--glow-cyan);color:#10203a;border-color:transparent}
+#edCanvas{display:block;width:100%;height:min(54vh,520px);border-radius:18px;touch-action:none;cursor:crosshair;background:#2a1d55}
+.ed-hint{font-size:13px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.btn,.toast{transition:none}}
 </style>
 
@@ -91,6 +98,7 @@ p{margin:0;line-height:1.5;color:var(--muted)}
     </div>
     <div class="actions">
       <button class="btn" id="startBtn" type="button">Spielen</button>
+      <button class="ghost" id="editBtn" type="button">Welt zeichnen</button>
       <span class="note">Web-Vorschau · die App entsteht in Unity</span>
     </div>
   </div>
@@ -109,6 +117,28 @@ p{margin:0;line-height:1.5;color:var(--muted)}
       <div><strong id="rScore">0</strong><span>Punkte</span></div>
     </div>
     <div class="actions"><button class="btn" id="againBtn" type="button">Nochmal</button><button class="ghost" id="overMenuBtn" type="button">Outfit ändern</button></div>
+  </div>
+</div>
+<div class="overlay" id="editOverlay" hidden>
+  <div class="card wide">
+    <div class="ed-top">
+      <h2>Meine Welt</h2>
+      <div class="brushes" role="group" aria-label="Pinsel">
+        <button type="button" data-brush="tree" aria-pressed="true">Baum</button>
+        <button type="button" data-brush="house" aria-pressed="false">Haus</button>
+        <button type="button" data-brush="water" aria-pressed="false">See</button>
+        <button type="button" data-brush="garden" aria-pressed="false">Garten</button>
+      </div>
+    </div>
+    <canvas id="edCanvas" aria-label="Zeichenfläche für deine Welt"></canvas>
+    <p class="ed-hint" id="edHint">Baum: tippen oder eine Linie ziehen · Haus: Rechteck aufziehen · See und Garten: Umriss malen. Die Straße in der Mitte bleibt immer frei.</p>
+    <div class="actions">
+      <button class="btn" id="buildBtn" type="button">In 3D verwandeln</button>
+      <button class="ghost" id="undoBtn" type="button">Rückgängig</button>
+      <button class="ghost" id="sampleBtn" type="button">Beispiel</button>
+      <button class="ghost" id="clearBtn" type="button">Leeren</button>
+      <button class="ghost" id="edBackBtn" type="button">Zurück</button>
+    </div>
   </div>
 </div>
 <div class="pad" id="pad" hidden>
@@ -184,17 +214,17 @@ const windowTex = (() => {
 })();
 const palette = ['#5a3fd1','#7b4fe0','#3a6ee8','#c04fd8','#4a3a9a','#e05fa8'];
 const props = []; // Kulisse, die mitwandert
-function addProp(mesh, span) { mesh.userData.span = span; props.push(mesh); scene.add(mesh); }
+function addProp(mesh, span, kind) { mesh.userData.span = span; mesh.userData.kind = kind; mesh.userData.baseX = mesh.position.x; props.push(mesh); scene.add(mesh); }
 const SPAN = 240;
 for (let i=0;i<26;i++) for (const side of [-1,1]) {
   const h = 8 + Math.random()*26, w = 5 + Math.random()*5, d = 6 + Math.random()*6;
   const tex = windowTex.clone(); tex.needsUpdate = true; tex.repeat.set(Math.max(1, Math.round(w/4)), Math.max(1, Math.round(h/7)));
   const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(palette[(Math.random()*palette.length)|0], { emissive:'#ffffff', emissiveMap:tex, emissiveIntensity:.9, roughness:.35 }));
   b.position.set(side*(11 + w/2 + Math.random()*8), h/2, -i*(SPAN/26) - Math.random()*4);
-  b.castShadow = false; b.receiveShadow = true; addProp(b, SPAN);
+  b.castShadow = false; b.receiveShadow = true; addProp(b, SPAN, 'city');
   if (Math.random() < .5) { // Dachgarten
     const crown = new THREE.Mesh(new THREE.SphereGeometry(Math.min(w,d)*.35, 10, 8), M('#3fe0a0', { roughness:.8 }));
-    crown.scale.y = .55; crown.position.set(b.position.x, h + .6, b.position.z); addProp(crown, SPAN);
+    crown.scale.y = .55; crown.position.set(b.position.x, h + .6, b.position.z); addProp(crown, SPAN, 'city');
   }
 }
 // Bäume zwischen Straße und Häusern
@@ -205,7 +235,7 @@ for (let i=0;i<30;i++) for (const side of [-1,1]) {
   const tr = new THREE.Mesh(trunkGeo, M('#5b3a2e')); tr.position.y = .8; g.add(tr);
   const lf = new THREE.Mesh(leafGeo, M(leafCols[(Math.random()*4)|0], { roughness:.7, flatShading:true })); lf.position.y = 2.2; lf.castShadow = true; g.add(lf);
   const s = .8 + Math.random()*.5; g.scale.set(s,s,s);
-  g.position.set(side*(7 + Math.random()*2.5), 0, -i*(SPAN/30)); addProp(g, SPAN);
+  g.position.set(side*(7 + Math.random()*2.5), 0, -i*(SPAN/30)); addProp(g, SPAN, 'deco');
 }
 
 // ---------- Spielfigur (eigene Figur, aus Grundformen) ----------
@@ -399,10 +429,10 @@ let last = performance.now();
 function frame(now){
   const dt = Math.min(.1, (now - last)/1000); last = now;
   if (state === 'run') { let rest = dt; while (rest > 0 && state === 'run') { const s = Math.min(rest, .02); step(s); rest -= s; } }
-  else if (state === 'menu') { for (const p of props) { p.position.z += dt*4; if (p.position.z > 20) p.position.z -= p.userData.span; } roadTex.offset.y += dt*.4; }
+  else if (state === 'menu' || state === 'editor') { for (const p of props) { p.position.z += dt*4; if (p.position.z > 20) p.position.z -= p.userData.span; } roadTex.offset.y += dt*.4; }
   for (const c of coins) c.mesh.rotation.y += dt*4;
   animateFigure(dt);
-  const menu = state === 'menu';
+  const menu = state === 'menu' || state === 'editor';
   const camT = menu ? new THREE.Vector3(2.6, 2.2, 4.6) : new THREE.Vector3(x*.55, 4.3 + feet*.35, 7.6);
   camera.position.lerp(camT, 1 - Math.exp(-(menu ? 3 : 9)*dt));
   if (shake > 0) { shake -= dt; camera.position.x += (Math.random()-.5)*shake; camera.position.y += (Math.random()-.5)*shake; }
@@ -423,6 +453,7 @@ function resume(){ if (state !== 'pause') return; state = 'run'; $('pauseOverlay
 function toMenu(){ reset(); state = 'menu'; ['overOverlay','pauseOverlay'].forEach(id => $(id).hidden = true); $('startOverlay').hidden = false; $('pauseBtn').hidden = true; $('pad').hidden = true; }
 window.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') { if (e.key === 'Enter') { applyOutfit(e.target.value); e.preventDefault(); } return; }
+  if (state === 'editor') return;
   const k = e.key;
   if (['ArrowLeft','a','A'].includes(k)) command('left');
   else if (['ArrowRight','d','D'].includes(k)) command('right');
@@ -455,6 +486,156 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 $('startBtn').onclick = startRun; $('againBtn').onclick = startRun; $('resumeBtn').onclick = resume; $('pauseBtn').onclick = pause;
 $('menuBtn').onclick = toMenu; $('overMenuBtn').onclick = toMenu;
 $('outfitBtn').onclick = () => applyOutfit($('outfitInput').value);
+
+// ---------- Welt-Editor: Zeichnung -> echte 3D-Welt ----------
+const PLAN = { halfW:30, len:200, track:5, clear:1.6 };
+const KINDS = new Set(['tree','house','water','garden']);
+let brush = 'tree', drawing = null, plan = loadPlan();
+const ed = $('edCanvas'), eg = ed.getContext('2d');
+const clampN = (v, a, b) => Math.min(b, Math.max(a, +v || 0));
+function sanitizePlan(p) {
+  const items = [];
+  for (const it of (Array.isArray(p && p.items) ? p.items : []).slice(0, 300)) {
+    if (!it || !KINDS.has(it.kind)) continue;
+    const pts = (Array.isArray(it.pts) ? it.pts : []).slice(0, 400).filter(q => Array.isArray(q) && q.length === 2 && isFinite(q[0]) && isFinite(q[1]))
+      .map(q => [clampN(q[0], -PLAN.halfW, PLAN.halfW), clampN(q[1], 0, PLAN.len)]);
+    if (pts.length) items.push({ kind:it.kind, pts, h:clampN(it.h || 10, 5, 22) });
+  }
+  return { items };
+}
+function loadPlan() { try { return sanitizePlan(JSON.parse(store.get('fs-world') || 'null')); } catch (e) { return { items:[] }; } }
+function savePlan() { store.set('fs-world', JSON.stringify(plan)); }
+function toPlan(e) { const r = ed.getBoundingClientRect(); return [clampN(((e.clientX - r.left)/r.width - .5)*2*PLAN.halfW, -PLAN.halfW, PLAN.halfW), clampN((1 - (e.clientY - r.top)/r.height)*PLAN.len, 0, PLAN.len)]; }
+function toCv(q) { return [(q[0]/(2*PLAN.halfW) + .5)*ed.width, (1 - q[1]/PLAN.len)*ed.height]; }
+function bounds(pts) { let a = [1e9,1e9], b = [-1e9,-1e9]; for (const q of pts) { a = [Math.min(a[0],q[0]), Math.min(a[1],q[1])]; b = [Math.max(b[0],q[0]), Math.max(b[1],q[1])]; } return [a, b]; }
+function pathLen(pts) { let L = 0; for (let i=1;i<pts.length;i++) L += Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]); return L; }
+function resample(pts, step) { const out = [pts[0]]; let carry = 0; for (let i=1;i<pts.length;i++) { const [ax,az] = pts[i-1], [bx,bz] = pts[i]; const L = Math.hypot(bx-ax, bz-az); let d = step - carry; while (d <= L) { out.push([ax + (bx-ax)*d/L, az + (bz-az)*d/L]); d += step; } carry = L - (d - step); } return out; }
+function inPoly(poly, x, z) { let inside = false; for (let i=0, j=poly.length-1; i<poly.length; j=i++) { const [xi,zi] = poly[i], [xj,zj] = poly[j]; if ((zi > z) !== (zj > z) && x < (xj-xi)*(z-zi)/(zj-zi) + xi) inside = !inside; } return inside; }
+// Strecke freihalten: alles, was in die Straße ragt, wird zur Seite geschoben (wie WorldBuilder im Unity-Kern).
+function keepClear(item) {
+  const limit = PLAN.track + PLAN.clear + (item.kind === 'tree' ? .8 : 0);
+  const [a, b] = bounds(item.pts);
+  if (b[0] <= -limit || a[0] >= limit) return false;
+  const center = (a[0] + b[0]) / 2, shift = center >= 0 ? limit - a[0] : -limit - b[0];
+  item.pts = item.pts.map(q => [clampN(q[0] + shift, -PLAN.halfW, PLAN.halfW), q[1]]);
+  return true;
+}
+function addItem(item) { const moved = keepClear(item); plan.items.push(item); savePlan(); drawEditor(); if (moved) toast('Zur Seite geschoben – die Strecke bleibt frei'); }
+function finishStroke(d) {
+  const pts = d.pts;
+  if (d.kind === 'tree') {
+    const spots = pathLen(pts) < 2.5 ? [pts[pts.length-1]] : resample(pts, 4);
+    spots.slice(0, 40).forEach(q => addItem({ kind:'tree', pts:[q] }));
+  } else if (d.kind === 'house') {
+    const [a0, b0] = [pts[0], pts[pts.length-1]];
+    let a = [Math.min(a0[0],b0[0]), Math.min(a0[1],b0[1])], b = [Math.max(a0[0],b0[0]), Math.max(a0[1],b0[1])];
+    if (b[0]-a[0] < 4) { const c = (a[0]+b[0])/2; a[0] = c-2; b[0] = c+2; }
+    if (b[1]-a[1] < 4) { const c = (a[1]+b[1])/2; a[1] = c-2; b[1] = c+2; }
+    b = [Math.min(b[0], a[0]+24), Math.min(b[1], a[1]+24)];
+    addItem({ kind:'house', pts:[a, b], h: 6 + Math.random()*14 });
+  } else {
+    if (pts.length < 6 || pathLen(pts) < 10) { toast('Male einen größeren Umriss'); drawEditor(); return; }
+    addItem({ kind:d.kind, pts: resample(pts, 1.5).slice(0, 400) });
+  }
+}
+function drawEditor() {
+  const W = ed.width, H = ed.height;
+  eg.fillStyle = '#2f2163'; eg.fillRect(0, 0, W, H);
+  eg.strokeStyle = 'rgba(255,255,255,.06)'; eg.lineWidth = 1;
+  for (let z=0; z<=PLAN.len; z+=20) { const y = toCv([0,z])[1]; eg.beginPath(); eg.moveTo(0,y); eg.lineTo(W,y); eg.stroke(); }
+  const [rl] = toCv([-PLAN.track, 0]), [rr] = toCv([PLAN.track, 0]);
+  eg.fillStyle = '#1d1640'; eg.fillRect(rl, 0, rr-rl, H);
+  eg.fillStyle = '#ff6fb5'; eg.fillRect(rl-2, 0, 3, H); eg.fillRect(rr-1, 0, 3, H);
+  eg.strokeStyle = 'rgba(126,242,255,.7)'; eg.setLineDash([10, 12]); eg.lineWidth = 2;
+  for (const lx of [-PLAN.track/3, PLAN.track/3]) { const x = toCv([lx,0])[0]; eg.beginPath(); eg.moveTo(x,0); eg.lineTo(x,H); eg.stroke(); }
+  eg.setLineDash([]);
+  const poly = (pts, fill, stroke) => { eg.beginPath(); pts.forEach((q,i) => { const [x,y] = toCv(q); i ? eg.lineTo(x,y) : eg.moveTo(x,y); }); eg.closePath(); eg.fillStyle = fill; eg.fill(); if (stroke) { eg.strokeStyle = stroke; eg.lineWidth = 2; eg.stroke(); } };
+  const r = Math.max(4, W/90);
+  for (const it of plan.items) {
+    if (it.kind === 'water') poly(it.pts, 'rgba(61,232,255,.55)', '#3de8ff');
+    else if (it.kind === 'garden') poly(it.pts, 'rgba(125,255,176,.28)', '#7dffb0');
+    else if (it.kind === 'house') { const [a,b] = it.pts, [x0,y0] = toCv([a[0],b[1]]), [x1,y1] = toCv([b[0],a[1]]); eg.fillStyle = '#9b7bff'; eg.fillRect(x0,y0,x1-x0,y1-y0); eg.strokeStyle = '#e6dcff'; eg.lineWidth = 2; eg.strokeRect(x0,y0,x1-x0,y1-y0); }
+    else { const [x,y] = toCv(it.pts[0]); eg.beginPath(); eg.arc(x,y,r,0,7); eg.fillStyle = '#ff7ac8'; eg.fill(); }
+  }
+  if (drawing) {
+    eg.strokeStyle = '#ffd23f'; eg.lineWidth = 3; eg.beginPath();
+    if (drawing.kind === 'house') { const [x0,y0] = toCv(drawing.pts[0]), [x1,y1] = toCv(drawing.pts[drawing.pts.length-1]); eg.strokeRect(x0,y0,x1-x0,y1-y0); }
+    else { drawing.pts.forEach((q,i) => { const [x,y] = toCv(q); i ? eg.lineTo(x,y) : eg.moveTo(x,y); }); eg.stroke(); }
+  }
+  if (!plan.items.length && !drawing) { eg.fillStyle = 'rgba(246,242,255,.75)'; eg.font = `600 ${Math.round(W/30)}px Fredoka, sans-serif`; eg.textAlign = 'center'; eg.fillText('Zeichne links und rechts der Straße', W/2, H*.12); }
+}
+function sizeEditor() { const r = ed.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1); ed.width = Math.max(1, Math.round(r.width*dpr)); ed.height = Math.max(1, Math.round(r.height*dpr)); drawEditor(); }
+ed.addEventListener('pointerdown', e => { ed.setPointerCapture(e.pointerId); drawing = { kind:brush, pts:[toPlan(e)] }; drawEditor(); });
+ed.addEventListener('pointermove', e => { if (!drawing) return; const q = toPlan(e), l = drawing.pts[drawing.pts.length-1]; if (Math.hypot(q[0]-l[0], q[1]-l[1]) > .6 && drawing.pts.length < 2000) { drawing.pts.push(q); drawEditor(); } });
+ed.addEventListener('pointerup', () => { if (!drawing) return; const d = drawing; drawing = null; finishStroke(d); });
+ed.addEventListener('pointercancel', () => { drawing = null; drawEditor(); });
+document.querySelectorAll('[data-brush]').forEach(b => b.onclick = () => { brush = b.dataset.brush; document.querySelectorAll('[data-brush]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+$('undoBtn').onclick = () => { plan.items.pop(); savePlan(); drawEditor(); };
+$('clearBtn').onclick = () => { plan.items = []; savePlan(); drawEditor(); };
+$('sampleBtn').onclick = () => {
+  const lake = [], garden = [];
+  for (let i=0;i<14;i++) { const a = i/14*Math.PI*2; lake.push([-19 + Math.cos(a)*8, 128 + Math.sin(a)*11]); }
+  plan = { items:[
+    { kind:'house', pts:[[10,28],[20,40]], h:16 }, { kind:'house', pts:[[-24,70],[-12,84]], h:11 }, { kind:'house', pts:[[9,150],[21,164]], h:20 },
+    ...[[-9,20],[-11,52],[10,96],[12,112],[-9,176]].map(q => ({ kind:'tree', pts:[q] })),
+    { kind:'water', pts:lake }, { kind:'garden', pts:[[9,60],[22,60],[24,80],[10,84]] } ] };
+  savePlan(); drawEditor();
+};
+function openEditor() { state = 'editor'; $('startOverlay').hidden = true; $('editOverlay').hidden = false; requestAnimationFrame(sizeEditor); }
+function closeEditor() { state = 'menu'; $('editOverlay').hidden = true; $('startOverlay').hidden = false; }
+window.addEventListener('resize', () => { if (!$('editOverlay').hidden) sizeEditor(); });
+
+const waterMat = M('#3de8ff', { emissive:'#0b5a7a', emissiveIntensity:.9, roughness:.15, metalness:.3, transparent:true, opacity:.85 });
+const flowerCols = ['#ff7ac8','#ffd23f','#ffffff','#9b8cff','#ff8a3d'];
+function applyWorld() {
+  for (const p of props.filter(p => p.userData.kind === 'user')) scene.remove(p);
+  for (let i = props.length - 1; i >= 0; i--) if (props[i].userData.kind === 'user') props.splice(i, 1);
+  const has = plan.items.length > 0;
+  for (const p of props) {
+    if (p.userData.kind === 'deco') p.visible = !has;
+    if (p.userData.kind === 'city') p.position.x = p.userData.baseX + (has ? Math.sign(p.userData.baseX)*17 : 0);
+  }
+  const span = PLAN.len;
+  for (const it of plan.items) {
+    if (it.kind === 'tree') {
+      const g = new THREE.Group(); const [x, z] = it.pts[0];
+      const tr = new THREE.Mesh(trunkGeo, M('#5b3a2e')); tr.position.y = .8; g.add(tr);
+      const lf = new THREE.Mesh(leafGeo, M(leafCols[(Math.random()*4)|0], { roughness:.7, flatShading:true })); lf.position.y = 2.2; lf.castShadow = true; g.add(lf);
+      const s = .9 + Math.random()*.5; g.scale.set(s, s, s); g.position.set(x, 0, -z); addProp(g, span, 'user');
+    } else if (it.kind === 'house') {
+      const [a, b] = it.pts, w = b[0]-a[0], d = b[1]-a[1], h = it.h || 10;
+      const tex = windowTex.clone(); tex.needsUpdate = true; tex.repeat.set(Math.max(1, Math.round(w/4)), Math.max(1, Math.round(h/7)));
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(palette[(Math.random()*palette.length)|0], { emissive:'#ffffff', emissiveMap:tex, emissiveIntensity:.9, roughness:.35 }));
+      m.position.set((a[0]+b[0])/2, h/2, -(a[1]+b[1])/2); m.castShadow = true; m.receiveShadow = true; addProp(m, span, 'user');
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d)*.62, 2.4, 4), M('#ff4fa3', { roughness:.5 }));
+      roof.rotation.y = Math.PI/4; roof.position.set(m.position.x, h + 1.2, m.position.z); addProp(roof, span, 'user');
+    } else {
+      const [a, b] = bounds(it.pts), cx = (a[0]+b[0])/2, cz = (a[1]+b[1])/2;
+      if (it.kind === 'water') {
+        const shape = new THREE.Shape(it.pts.map(q => new THREE.Vector2(q[0]-cx, q[1]-cz)));
+        const lake = new THREE.Mesh(new THREE.ShapeGeometry(shape), waterMat);
+        lake.rotation.x = -Math.PI/2; lake.position.set(cx, .04, -cz); lake.receiveShadow = true; addProp(lake, span, 'user');
+      } else {
+        const shape = new THREE.Shape(it.pts.map(q => new THREE.Vector2(q[0]-cx, q[1]-cz)));
+        const lawnPatch = new THREE.Mesh(new THREE.ShapeGeometry(shape), M('#3fbf86', { roughness:.9 }));
+        lawnPatch.rotation.x = -Math.PI/2; lawnPatch.position.set(cx, .03, -cz); addProp(lawnPatch, span, 'user');
+        const area = (b[0]-a[0])*(b[1]-a[1]), count = Math.min(70, Math.max(4, area/5|0));
+        for (let i=0, tries=0; i<count && tries<count*10; tries++) {
+          const fx = a[0] + Math.random()*(b[0]-a[0]), fz = a[1] + Math.random()*(b[1]-a[1]);
+          if (!inPoly(it.pts, fx, fz)) continue;
+          const f = new THREE.Mesh(new THREE.IcosahedronGeometry(.28 + Math.random()*.18, 0), M(flowerCols[(Math.random()*flowerCols.length)|0], { flatShading:true, emissive:'#221133' }));
+          f.position.set(fx, .35, -fz); addProp(f, span, 'user'); i++;
+        }
+      }
+    }
+  }
+}
+$('editBtn').onclick = openEditor;
+$('edBackBtn').onclick = closeEditor;
+$('buildBtn').onclick = () => { applyWorld(); closeEditor(); toast(plan.items.length ? 'Deine Welt ist jetzt 3D!' : 'Standard-Stadt geladen'); };
+let toastTimer = 0;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200); }
+applyWorld();
 
 const savedOutfit = store.get('fs-outfit'); if (savedOutfit) $('outfitInput').value = savedOutfit;
 applyOutfit($('outfitInput').value);

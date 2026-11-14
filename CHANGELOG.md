@@ -3,6 +3,9 @@
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
+### Hinzugefügt (Web-Vorschau)
+- Spielbare Browser-Version mit Welt-Editor: zeichnen → echte 3D-Häuser, Bäume, Seen, Gärten; Strecke bleibt automatisch frei.
+
 ### Hinzugefügt
 - GitHub Actions: Kern-Tests bei jedem Push; Cloud-Build für Android, Windows und WebGL per Knopfdruck (GameCI).
 - Welten speichern/laden (JSON, atomar, manipulationssicher) + AtomicFile; 11 neue Tests.
