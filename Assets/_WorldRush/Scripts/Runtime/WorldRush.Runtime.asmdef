@@ -2,8 +2,7 @@
     "name": "WorldRush.Runtime",
     "rootNamespace": "WorldRush.Runtime",
     "references": [
-        "WorldRush.Core",
-        "Unity.InputSystem"
+        "WorldRush.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

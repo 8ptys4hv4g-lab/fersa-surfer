@@ -3,6 +3,9 @@
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
+### Geändert
+- Input-System-Paket entfernt (Version passte nicht zu Unity 6.6, Kompilierfehler). Steuerung läuft über den eingebauten Input Manager (Tastatur, Maus, Touch).
+
 ### Hinzugefügt (Web-Vorschau)
 - Power-ups (Surfboard, Magnet, Schild, 2×), Combo-Multiplikator, Partikel, Speed-Linien, Tag-Nacht-Zyklus, live erzeugte Musik + Soundeffekte.
 - Grafik-Upgrade: Toon-Shading, Bloom-Leuchten, Figur mit großem Kopf, Augen und Comic-Konturen.
