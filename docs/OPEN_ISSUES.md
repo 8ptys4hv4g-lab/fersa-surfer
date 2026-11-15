@@ -1,4 +1,4 @@
-# Offene Punkte – Fersa Surfer
+# Offene Punkte – Fersa Wave
 
 | # | Punkt | Wichtigkeit | Wer / Wann |
 |---|---|---|---|
@@ -8,7 +8,7 @@
 | 4 | URP-Pipeline-Asset wird nicht automatisch angelegt. Ohne URP nutzt der Prototyp Standard-Materialien. Sauber einrichten in M2. | 🟡 mittel | M2 |
 | 5 | Grafik ist nur ein Prototyp aus Würfeln und Kapsel. Für M2 braucht es eigene 3D-Modelle und eine animierte Figur: selbst erstellt (Blender), beauftragt oder Assets mit klarer kommerzieller Lizenz. **Kostenfreigabe nötig.** | 🟡 mittel | M2 |
 | 6 | Schrift: Fredoka/Nunito (OFL) als Datei einbinden. | 🟢 niedrig | M3 |
-| 7 | Markenname „Fersa Surfer“ vor Veröffentlichung prüfen (Markenregister, Stores, Domain). | 🟡 mittel | vor M10 |
+| 7 | Markenname „Fersa Wave“ vor Veröffentlichung prüfen: DPMAregister, EUIPO eSearch, Google Play/App Store, Domain. | 🟡 mittel | vor Veröffentlichung |
 | 8 | Git LFS für große 3D-/Audio-Dateien einrichten, sobald solche Dateien dazukommen. | 🟢 niedrig | M2 |
 | 9 | Sehr lange Läufe: Die Z-Koordinate wächst unbegrenzt. Bis etwa 20 km ist die Genauigkeit ausreichend. Danach Floating Origin einbauen. | 🟢 niedrig | M8 |
 | 10 | Hindernis-Ansichten werden pro Reihe neu erzeugt. Pooling für Mobile ergänzen. | 🟢 niedrig | M8 |

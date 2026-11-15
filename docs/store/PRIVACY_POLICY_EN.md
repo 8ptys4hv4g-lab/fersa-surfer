@@ -1,8 +1,8 @@
-# Privacy Policy – Fersa Surfer
+# Privacy Policy – Fersa Wave
 
 **Last updated:** 15 November 2026
 
-**Fersa Surfer does not collect, store or share any personal data.**
+**Fersa Wave does not collect, store or share any personal data.**
 
 - No accounts or sign-in.
 - No internet connection: the game sends no data to us or to third parties.

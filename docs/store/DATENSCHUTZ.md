@@ -1,11 +1,11 @@
-# Datenschutzerklärung – Fersa Surfer
+# Datenschutzerklärung – Fersa Wave
 
 **Stand:** 15.11.2026
 
-Fersa Surfer ist ein Spiel für Kinder und Familien. Wir nehmen Datenschutz ernst und halten es einfach:
+Fersa Wave ist ein Spiel für Kinder und Familien. Wir nehmen Datenschutz ernst und halten es einfach:
 
 ## Kurz gesagt
-**Fersa Surfer erhebt, speichert und überträgt keine personenbezogenen Daten.**
+**Fersa Wave erhebt, speichert und überträgt keine personenbezogenen Daten.**
 
 ## Im Einzelnen
 - **Keine Konten, keine Anmeldung.** Das Spiel funktioniert ohne Benutzerkonto.

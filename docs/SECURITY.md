@@ -13,7 +13,7 @@
 | Atomares Speichern mit Sicherung (.bak) | `LocalSaveRepository` | Datenverlust bei Absturz oder leerem Akku |
 | Keine Schlüssel und Passwörter im Code; `.gitignore` blockt Keystores und `.env` | Repository | Gestohlene Zugänge |
 | Eigener, deterministischer Zufall mit fester Kollisionslogik | `Core` | Unfaire Strecken; später überprüfbare Bestwerte |
-| Build-Einstellungen: IL2CPP, Code-Stripping, nur HTTPS | Menü „Fersa Surfer → 2.“ | Einfaches Auslesen oder Ändern des Codes, unsichere Verbindungen |
+| Build-Einstellungen: IL2CPP, Code-Stripping, nur HTTPS | Menü „Fersa Wave → 2.“ | Einfaches Auslesen oder Ändern des Codes, unsichere Verbindungen |
 | Keine Internetverbindung im Spiel | gesamt | Keine Angriffsfläche über das Netz |
 
 ## Später, wenn Online-Funktionen kommen (M10/M11)

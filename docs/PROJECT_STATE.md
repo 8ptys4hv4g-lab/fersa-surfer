@@ -1,4 +1,4 @@
-# Projektstand – Fersa Surfer
+# Projektstand – Fersa Wave
 
 **Stand:** 2026-11-14 · Version 0.2.0 · **M0 + M1 ✅ in Unity bestätigt** · M2/M7 in Arbeit
 
@@ -42,7 +42,7 @@ Fertig umgesetzt:
 - Steuerung: Wischen (Touch + Maus), Tastatur, Gamepad
 - Spielstand lokal, sicher gespeichert (mit Backup)
 - Unity-Szene aus einfachen 3D-Formen + Kamera + Anzeige (Prototyp)
-- Menü "Fersa Surfer" in Unity: Demo-Szene erstellen, sichere Build-Einstellungen
+- Menü "Fersa Wave" in Unity: Demo-Szene erstellen, sichere Build-Einstellungen
 - Doku: README, AGENTS, CLAUDE, PLAN, ARCHITECTURE, SECURITY, CHANGELOG, ADRs, Archiv
 
 Tatsächlich ausgeführt/getestet:
@@ -63,7 +63,7 @@ Nicht ausgeführt / Grund:
 So kann ich es selbst ausprobieren:
 1. Unity Hub → Unity 6 LTS installieren
 2. Add project from disk → diesen Ordner
-3. Menü "Fersa Surfer → 1. Demo-Szene erstellen"
+3. Menü "Fersa Wave → 1. Demo-Szene erstellen"
 4. ▶ Play drücken, mit Pfeiltasten oder Maus-Wischen spielen
 
 Offene Fehler oder Kosten:

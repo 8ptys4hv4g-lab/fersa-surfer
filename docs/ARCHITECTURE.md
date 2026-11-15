@@ -1,4 +1,4 @@
-# Architektur – Fersa Surfer
+# Architektur – Fersa Wave
 
 ## Grundidee
 
@@ -46,7 +46,7 @@ flowchart TD
 | `Scripts/Core/Input` | Gestenerkennung | Nein |
 | `Scripts/Core/Persistence` | Spielstand speichern und laden | Nein |
 | `Scripts/Runtime` | Szene, Darstellung, Eingabegeräte, HUD | Ja |
-| `Scripts/Editor` | Menü „Fersa Surfer“ (Szene, Materialien, Build-Einstellungen) | Ja (nur im Editor) |
+| `Scripts/Editor` | Menü „Fersa Wave“ (Szene, Materialien, Build-Einstellungen) | Ja (nur im Editor) |
 | `Tests/EditMode` | Kern-Tests (auch per `dotnet test` lauffähig) | Nein |
 | `Tests/PlayMode` | Rauchtest mit echtem GameObject | Ja |
 

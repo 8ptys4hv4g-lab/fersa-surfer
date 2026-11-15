@@ -6,15 +6,15 @@ Reihenfolge von oben nach unten. ✅ = in der App/im Projekt erledigt.
 1. ✅ Spiel inkl. Menü, Optionen, Tutorial, Credits, DE/EN.
 2. Unity Hub → Installationen → Unity 6.6 → *Module hinzufügen* → **Android Build Support** (mit OpenJDK + SDK/NDK).
 3. Unity: **File → Build Profiles → Android → Switch Platform**.
-4. Menü **Fersa Surfer → 6. Store-Einstellungen + App-Icon (Android)** (Icon, Paketname `com.fersasurfer.game`, Version, IL2CPP, ARM64, .aab, Querformat).
+4. Menü **Fersa Wave → 6. Store-Einstellungen + App-Icon (Android)** (Icon, Paketname `com.fersawave.game`, Version, IL2CPP, ARM64, .aab, Querformat).
 5. **Keystore anlegen:** Edit → Project Settings → Player → Android → *Publishing Settings* → **Keystore Manager** → neu → Passwort → *Add key*.
    - ⚠️ Keystore-Datei + Passwörter **doppelt sichern** (USB-Stick + Passwort-Manager). **Nie** auf GitHub. Ohne ihn keine Updates.
-6. Menü **Fersa Surfer → 7. Android-AAB bauen** → Datei `Builds/Android/FersaSurfer-<Version>.aab`.
+6. Menü **Fersa Wave → 7. Android-AAB bauen** → Datei `Builds/Android/FersaSurfer-<Version>.aab`.
 7. Auf dem eigenen Android-Handy testen (z. B. *Build And Run* mit USB-Debugging oder interner Test in der Play Console).
 
 ## B. Google Play Console
 1. Entwicklerkonto anlegen (**25 $ einmalig**, Ausweisprüfung).
-2. *App erstellen* → Name **Fersa Surfer**, Spiel, kostenlos.
+2. *App erstellen* → Name **Fersa Wave**, Spiel, kostenlos.
 3. **Datenschutzerklärung** online stellen (Text: `docs/store/DATENSCHUTZ.md`, Platzhalter ausfüllen) und Link eintragen.
 4. **Datensicherheit**, **Zielgruppe**, **Altersfreigabe** ausfüllen → Antworten in `docs/store/ALTERSFREIGABE_UND_DATENSICHERHEIT.md`.
 5. **Store-Eintrag:** Texte aus `docs/store/STORE_TEXTE.md`; Grafiken aus dem Ordner `StoreAssets` (Icon 512×512, Titelbild 1024×500) + **mindestens 2 Screenshots** (Querformat; siehe unten).

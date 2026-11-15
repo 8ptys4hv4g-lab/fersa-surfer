@@ -23,7 +23,7 @@ namespace WorldRush.EditorTools
             FersaSurferSetupMenu.CreateDemoScene();
             PlayerSettings.productName = ProductInfo.DisplayName;
             PlayerSettings.bundleVersion = ProductInfo.Version;
-            PlayerSettings.companyName = "FersaSurfer";
+            PlayerSettings.companyName = "FersaWave";
 
             // Linux-Build-Server können Windows nur mit Mono bauen; Android/WebGL nutzen IL2CPP.
             var backend = target == BuildTarget.StandaloneWindows64 || target == BuildTarget.StandaloneLinux64
@@ -33,7 +33,7 @@ namespace WorldRush.EditorTools
 
             if (target == BuildTarget.Android)
             {
-                PlayerSettings.SetApplicationIdentifier(named, "com.fersasurfer.game");
+                PlayerSettings.SetApplicationIdentifier(named, "com.fersawave.game");
                 PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
                 PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
                 EditorUserBuildSettings.buildAppBundle = false; // APK zum direkten Installieren

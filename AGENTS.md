@@ -1,7 +1,7 @@
 # AGENTS.md – Regeln für KI-Assistenten (Claude Code und andere)
 
 ## Projekt
-**Fersa Surfer** ist ein 3D-Endless-Runner in Unity 6 mit URP und C#. Der interne Code-Name lautet `WorldRush`.
+**Fersa Wave** ist ein 3D-Endless-Runner in Unity 6 mit URP und C#. Der interne Code-Name lautet `WorldRush`.
 Die verbindliche Vision steht in `docs/archive/2026-11-14_MASTERPLAN_v1.0.md`, der aktuelle Plan in `docs/PLAN.md`.
 
 ## Vor jeder Arbeit lesen

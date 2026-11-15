@@ -9,7 +9,7 @@ using WorldRush.Runtime;
 namespace WorldRush.EditorTools
 {
     /// <summary>
-    /// Menü "Fersa Surfer → Demo-Szene erstellen": Unity selbst erzeugt Szene und Materialien
+    /// Menü "Fersa Wave → Demo-Szene erstellen": Unity selbst erzeugt Szene und Materialien
     /// (keine handgeschriebenen .unity/.mat-Dateien), trägt die Szene in die Build-Liste ein
     /// und setzt Produktname und sichere Build-Einstellungen.
     /// </summary>
@@ -19,7 +19,7 @@ namespace WorldRush.EditorTools
         private const string ScenePath = Root + "/Scenes/RunnerDemo.unity";
         private const string MaterialDir = Root + "/Art/Materials";
 
-        [MenuItem("Fersa Surfer/1. Demo-Szene erstellen", priority = 1)]
+        [MenuItem("Fersa Wave/1. Demo-Szene erstellen", priority = 1)]
         public static void CreateDemoScene()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
@@ -45,7 +45,7 @@ namespace WorldRush.EditorTools
             Debug.Log($"[FersaSurfer] Szene erstellt: {ScenePath}. Jetzt oben auf ▶ (Play) drücken.");
         }
 
-        [MenuItem("Fersa Surfer/2. Sichere Build-Einstellungen setzen", priority = 2)]
+        [MenuItem("Fersa Wave/2. Sichere Build-Einstellungen setzen", priority = 2)]
         public static void ApplyPlayerSettings()
         {
             PlayerSettings.productName = ProductInfo.DisplayName;
@@ -63,7 +63,7 @@ namespace WorldRush.EditorTools
             Debug.Log("[FersaSurfer] Build-Einstellungen gesetzt: IL2CPP, Code-Stripping, nur HTTPS, Android ARM64.");
         }
 
-        [MenuItem("Fersa Surfer/3. 3D-Figuren neu importieren", priority = 3)]
+        [MenuItem("Fersa Wave/3. 3D-Figuren neu importieren", priority = 3)]
         public static void ReimportCharacters()
         {
             int n = 0;
@@ -75,10 +75,10 @@ namespace WorldRush.EditorTools
             Debug.Log($"[FersaSurfer] {n} Figur(en) neu importiert (Animationen als Legacy). Jetzt ▶ drücken.");
         }
 
-        [MenuItem("Fersa Surfer/4. Figuren übernehmen (HAON & Co.)", priority = 4)]
+        [MenuItem("Fersa Wave/4. Figuren übernehmen (HAON & Co.)", priority = 4)]
         public static void UseCharacters()
         {
-            if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog("Fersa Surfer", "Bitte zuerst das Spiel stoppen (■).", "OK"); return; }
+            if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog("Fersa Wave", "Bitte zuerst das Spiel stoppen (■).", "OK"); return; }
 
             // 1) Ausgewählte Figur/Ordner, sonst 2) automatisch alle Figuren-Prefabs aus Paketen mit "haon"/"character"/"chara" im Pfad
             var candidates = new List<string>();
@@ -120,7 +120,7 @@ namespace WorldRush.EditorTools
             AssetDatabase.Refresh();
             if (n == 0)
             {
-                EditorUtility.DisplayDialog("Fersa Surfer", "Keine Figuren gefunden. Bitte zuerst 'HAON SD series Free bundle' über Window → Package Manager → My Assets importieren.", "OK");
+                EditorUtility.DisplayDialog("Fersa Wave", "Keine Figuren gefunden. Bitte zuerst 'HAON SD series Free bundle' über Window → Package Manager → My Assets importieren.", "OK");
                 return;
             }
             UnityEngine.PlayerPrefs.SetString("fs-character", first);
@@ -137,7 +137,7 @@ namespace WorldRush.EditorTools
             }
             string report = $"{n} Figur(en) übernommen.\n{converted} Material(ien) für URP umgewandelt.\nMit Lauf-Animation: {withRun}.\nShader: {Top(charStats)}\n\nIm Startmenü mit < > auswählen, dann ▶.";
             Debug.Log("[FersaSurfer] " + report.Replace("\n", " | "));
-            EditorUtility.DisplayDialog("Fersa Surfer", report, "OK");
+            EditorUtility.DisplayDialog("Fersa Wave", report, "OK");
         }
 
         private static readonly string[] PartWords = { "acc", "hair", "face", "prop", "guide", "preview", "dummy", "weapon", "blendshape" };
@@ -145,16 +145,16 @@ namespace WorldRush.EditorTools
         private static readonly string[] CarWords = { "car", "taxi", "bus", "truck", "van", "police", "ambulance", "vehicle", "suv", "pickup", "firetruck" };
         private static readonly string[] SkipWords = { "road", "street", "crossing", "sidewalk", "terrain", "ground", "tile", "floor", "plane", "base", "demo", "scene", "camera", "light probe" };
 
-        [MenuItem("Fersa Surfer/5. Ausgewählten Stadt-Ordner verwenden", priority = 5)]
+        [MenuItem("Fersa Wave/5. Ausgewählten Stadt-Ordner verwenden", priority = 5)]
         public static void UseSelectedCityFolder()
         {
-            if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog("Fersa Surfer", "Bitte zuerst das Spiel stoppen (■).", "OK"); return; }
+            if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog("Fersa Wave", "Bitte zuerst das Spiel stoppen (■).", "OK"); return; }
             string folder = Selection.activeObject != null ? AssetDatabase.GetAssetPath(Selection.activeObject) : null;
             if (!string.IsNullOrEmpty(folder) && !AssetDatabase.IsValidFolder(folder)) folder = System.IO.Path.GetDirectoryName(folder)?.Replace('\\', '/');
             if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder) || folder.StartsWith(Root)) folder = FindCityFolder();
             if (folder == null)
             {
-                EditorUtility.DisplayDialog("Fersa Surfer", "Kein Stadt-Paket gefunden. Bitte zuerst 'Cartoon City' über Window → Package Manager → My Assets importieren.", "OK");
+                EditorUtility.DisplayDialog("Fersa Wave", "Kein Stadt-Paket gefunden. Bitte zuerst 'Cartoon City' über Window → Package Manager → My Assets importieren.", "OK");
                 return;
             }
             Debug.Log("[FersaSurfer] Verwende Stadt-Ordner: " + folder);
@@ -189,7 +189,7 @@ namespace WorldRush.EditorTools
             int cityConverted = ConvertMaterials(copiedCity, env + "/Materials", cityStats);
             string cityReport = $"Übernommen: {b} Gebäude, {c} Autos, {p} Deko.\n{cityConverted} Material(ien) für URP umgewandelt.\nShader: {Top(cityStats)}\n\nJetzt ▶ drücken.";
             Debug.Log("[FersaSurfer] " + cityReport.Replace("\n", " | "));
-            EditorUtility.DisplayDialog("Fersa Surfer", cityReport, "OK");
+            EditorUtility.DisplayDialog("Fersa Wave", cityReport, "OK");
         }
 
 /// <summary>Sucht den Ordner eines importierten Stadt-Pakets (Name enthält "city"/"town"), bevorzugt dessen Prefabs-Ordner.</summary>

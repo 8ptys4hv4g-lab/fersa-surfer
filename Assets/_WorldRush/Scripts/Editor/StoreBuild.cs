@@ -14,9 +14,9 @@ namespace WorldRush.EditorTools
     {
         private const string IconPath = "Assets/_WorldRush/Art/AppIcon.png";
         private const string StoreFolder = "StoreAssets";
-        public const string PackageId = "com.fersasurfer.game";
+        public const string PackageId = "com.fersawave.game";
 
-        [MenuItem("Fersa Surfer/6. Store-Einstellungen + App-Icon (Android)", priority = 20)]
+        [MenuItem("Fersa Wave/6. Store-Einstellungen + App-Icon (Android)", priority = 20)]
         public static void PrepareStore()
         {
             // 1) Icon + Store-Grafiken
@@ -36,7 +36,7 @@ namespace WorldRush.EditorTools
             var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
 
             // 2) Allgemeine Angaben
-            PlayerSettings.companyName = "FersaSurfer";
+            PlayerSettings.companyName = "FersaWave";
             PlayerSettings.productName = ProductInfo.DisplayName;
             PlayerSettings.bundleVersion = ProductInfo.Version;
             if (icon != null) PlayerSettings.SetIcons(NamedBuildTarget.Unknown, new[] { icon }, IconKind.Any);
@@ -65,22 +65,22 @@ namespace WorldRush.EditorTools
 
             string msg = $"Fertig:\n• App-Icon erstellt ({IconPath})\n• Store-Grafiken im Ordner '{StoreFolder}' (Icon 512, Titelbild 1024×500)\n" +
                          $"• Paketname {PackageId}, Version {ProductInfo.Version} (Code {VersionCode(ProductInfo.Version)})\n• Querformat, IL2CPP, ARM64, App Bundle (.aab)\n\n" +
-                         "Nächster Schritt: Menü 'Fersa Surfer → 7. Android-AAB bauen'.";
+                         "Nächster Schritt: Menü 'Fersa Wave → 7. Android-AAB bauen'.";
             Debug.Log("[FersaSurfer] " + msg.Replace("\n", " | "));
-            EditorUtility.DisplayDialog("Fersa Surfer – Store", msg, "OK");
+            EditorUtility.DisplayDialog("Fersa Wave – Store", msg, "OK");
         }
 
-        [MenuItem("Fersa Surfer/7. Android-AAB bauen", priority = 21)]
+        [MenuItem("Fersa Wave/7. Android-AAB bauen", priority = 21)]
         public static void BuildAab()
         {
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
             {
-                EditorUtility.DisplayDialog("Fersa Surfer", "Bitte zuerst auf Android umstellen:\nFile → Build Profiles → Android → 'Switch Platform'.\n\n(Falls Android fehlt: im Unity Hub bei Unity 6.6 das Modul 'Android Build Support' hinzufügen.)", "OK");
+                EditorUtility.DisplayDialog("Fersa Wave", "Bitte zuerst auf Android umstellen:\nFile → Build Profiles → Android → 'Switch Platform'.\n\n(Falls Android fehlt: im Unity Hub bei Unity 6.6 das Modul 'Android Build Support' hinzufügen.)", "OK");
                 return;
             }
             if (!PlayerSettings.Android.useCustomKeystore || string.IsNullOrEmpty(PlayerSettings.Android.keystoreName) || !File.Exists(PlayerSettings.Android.keystoreName))
             {
-                EditorUtility.DisplayDialog("Fersa Surfer – Signatur fehlt",
+                EditorUtility.DisplayDialog("Fersa Wave – Signatur fehlt",
                     "Google Play braucht einen eigenen Signatur-Schlüssel (Keystore):\n\n" +
                     "Edit → Project Settings → Player → Android → Publishing Settings → 'Keystore Manager' → neuen Keystore anlegen, Passwort merken, 'Add key'.\n\n" +
                     "WICHTIG: Keystore-Datei + Passwort sicher aufbewahren (z. B. USB-Stick + Passwort-Manager) und NIE auf GitHub hochladen. Ohne ihn kannst du keine Updates mehr veröffentlichen.", "OK");
@@ -99,7 +99,7 @@ namespace WorldRush.EditorTools
                 ? $"Gebaut: {path}\nGröße: {report.summary.totalSize / (1024 * 1024)} MB\n\nDiese Datei lädst du in der Google Play Console hoch (Test → Geschlossener Test)."
                 : $"Build fehlgeschlagen ({report.summary.totalErrors} Fehler). Details in der Console.";
             Debug.Log("[FersaSurfer] " + text.Replace("\n", " | "));
-            EditorUtility.DisplayDialog("Fersa Surfer – Android", text, "OK");
+            EditorUtility.DisplayDialog("Fersa Wave – Android", text, "OK");
             if (ok) EditorUtility.RevealInFinder(path);
         }
 
