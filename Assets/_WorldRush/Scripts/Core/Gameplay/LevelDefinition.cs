@@ -40,7 +40,8 @@ namespace WorldRush.Core
             index = Math.Max(0, index);
             float length = 520f + index * 140f;
             var water = new List<(float, float)>();
-            for (float a = 170f; a + 140f < length - 60f; a += 320f)
+            float firstWater = index == 0 ? 70f : 170f; // Level 1: Surfen kommt früh, damit man es sofort erlebt
+            for (float a = firstWater; a + 140f < length - 60f; a += 320f)
                 water.Add((a, a + 140f + Math.Min(index, 4) * 10f));
             string name = Names[index % Names.Length] + (index >= Names.Length ? " " + (index / Names.Length + 1) : "");
             return new LevelDefinition(index, name, length, water);
