@@ -98,6 +98,8 @@ namespace WorldRush.Runtime
 
             BuildAtmosphere();
             BuildEnvironment();
+            if (MaterialFactory.EmptySlotsFilled > 0)
+                Debug.Log($"[FersaSurfer] {MaterialFactory.EmptySlotsFilled} leere Material-Plätze mit Cartoon-Farben gefüllt.");
             BuildPlayer();
             BuildCamera();
             BuildParticles();
@@ -1047,17 +1049,68 @@ namespace WorldRush.Runtime
             return lit;
         }
 
-        /// <summary>Alle Materialien eines Objekts URP-tauglich machen.</summary>
+        private static readonly Dictionary<string, Material> Fallbacks = new Dictionary<string, Material>();
+        public static int EmptySlotsFilled;
+
+        private static readonly Color[] Pastels =
+        {
+            new Color(0.98f, 0.72f, 0.62f), new Color(0.62f, 0.8f, 0.98f), new Color(0.98f, 0.88f, 0.55f),
+            new Color(0.72f, 0.92f, 0.7f), new Color(0.86f, 0.72f, 0.98f), new Color(0.98f, 0.66f, 0.8f)
+        };
+        private static readonly Color[] CarColors =
+        {
+            new Color(0.95f, 0.25f, 0.3f), new Color(0.2f, 0.55f, 0.95f), new Color(1f, 0.8f, 0.15f),
+            new Color(0.25f, 0.8f, 0.45f), new Color(0.95f, 0.5f, 0.15f), new Color(0.95f, 0.95f, 0.98f)
+        };
+
+        /// <summary>Material für leere Material-Plätze: Cartoon-Farbe passend zum Objektnamen.</summary>
+        public static Material Fallback(string objectName, int slot)
+        {
+            string n = (objectName ?? "").ToLowerInvariant();
+            int h = 0;
+            foreach (char ch in n) h = h * 31 + ch;
+            h = System.Math.Abs(h + slot * 7);
+            Color c;
+            string key;
+            if (n.Contains("tree") || n.Contains("bush") || n.Contains("plant") || n.Contains("grass") || n.Contains("leaf"))
+            { c = slot == 0 ? new Color(0.36f, 0.78f, 0.38f) : new Color(0.52f, 0.34f, 0.22f); key = "green" + slot; }
+            else if (n.Contains("car") || n.Contains("taxi") || n.Contains("bus") || n.Contains("truck") || n.Contains("van"))
+            { c = slot == 0 ? CarColors[h % CarColors.Length] : new Color(0.15f, 0.15f, 0.2f); key = "car" + (slot == 0 ? h % CarColors.Length : 99); }
+            else if (n.Contains("lamp") || n.Contains("light") || n.Contains("pole") || n.Contains("sign") || n.Contains("fence") || n.Contains("bench"))
+            { c = new Color(0.42f, 0.45f, 0.55f); key = "metal"; }
+            else if (n.Contains("road") || n.Contains("street") || n.Contains("sidewalk"))
+            { c = new Color(0.32f, 0.32f, 0.38f); key = "road"; }
+            else
+            { c = slot == 0 ? Pastels[h % Pastels.Length] : (slot == 1 ? new Color(0.55f, 0.82f, 0.98f) : Pastels[(h + slot) % Pastels.Length]); key = "pastel" + (h + slot) % Pastels.Length + "_" + System.Math.Min(slot, 1); }
+            if (!Fallbacks.TryGetValue(key, out var m))
+            {
+                m = Create(c, 0.35f);
+                m.name = "Cartoon_" + key;
+                Fallbacks[key] = m;
+            }
+            return m;
+        }
+
+        /// <summary>Alle Materialien eines Objekts URP-tauglich machen; leere Plätze bekommen Cartoon-Farben.</summary>
         public static void FixMaterials(GameObject go)
         {
             foreach (var r in go.GetComponentsInChildren<Renderer>(true))
             {
                 if (r is ParticleSystemRenderer) continue;
+                int subMeshes = 1;
+                if (r is SkinnedMeshRenderer smr && smr.sharedMesh != null) subMeshes = smr.sharedMesh.subMeshCount;
+                else
+                {
+                    var mf = r.GetComponent<MeshFilter>();
+                    if (mf != null && mf.sharedMesh != null) subMeshes = mf.sharedMesh.subMeshCount;
+                }
                 var mats = r.sharedMaterials;
                 bool changed = false;
+                if (mats.Length < subMeshes) { System.Array.Resize(ref mats, subMeshes); changed = true; }
                 for (int i = 0; i < mats.Length; i++)
                 {
-                    var fixedMat = MakeCompatible(mats[i]);
+                    Material fixedMat = mats[i] == null ? Fallback(r.name + " " + go.name, i) : MakeCompatible(mats[i]);
+                    if (mats[i] == null) EmptySlotsFilled++;
                     if (fixedMat != mats[i]) { mats[i] = fixedMat; changed = true; }
                 }
                 if (changed) r.sharedMaterials = mats;
