@@ -5,7 +5,7 @@ namespace UnityEngine.Rendering
     public class FloatParameter : VolumeParameter<float> { }
     public class MinFloatParameter : FloatParameter { }
     public class ClampedFloatParameter : FloatParameter { }
-    public abstract class VolumeComponent : ScriptableObject { }
+    public abstract class VolumeComponent : ScriptableObject { public bool active = true; }
     public sealed class VolumeProfile : ScriptableObject { public T Add<T>(bool overrides = false) where T : VolumeComponent => CreateInstance<T>(); }
     public class Volume : MonoBehaviour { public bool isGlobal; public float priority; public VolumeProfile profile; }
 }

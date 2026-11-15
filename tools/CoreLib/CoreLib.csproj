@@ -11,4 +11,5 @@
   <ItemGroup>
     <Compile Include="../../Assets/_WorldRush/Scripts/Core/**/*.cs" />
   </ItemGroup>
+  <ItemGroup><AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo"><_Parameter1>CoreTests</_Parameter1></AssemblyAttribute></ItemGroup>
 </Project>

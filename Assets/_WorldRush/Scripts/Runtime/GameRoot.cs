@@ -75,6 +75,8 @@ namespace WorldRush.Runtime
         private void Awake()
         {
             Application.targetFrameRate = 60;
+            Screen.sleepTimeout = SleepTimeout.NeverSleep; // Bildschirm geht beim Spielen nicht aus
+            LoadSettings();
             CreateMaterialsIfMissing();
 
             _saveRepo = new LocalSaveRepository(Path.Combine(Application.persistentDataPath, ProductInfo.SaveFileName));
@@ -92,14 +94,14 @@ namespace WorldRush.Runtime
             _session.CoinCollected += OnCoin;
             _session.PowerUpActivated += OnPowerUp;
             _session.ShieldUsed += OnShieldUsed;
-            _session.ComboMilestone += m => _hud?.Popup("Combo ×" + m + "!", Sun);
+            _session.ComboMilestone += m => _hud?.Popup(L.T("popup.combo", m), Sun);
             _session.Crashed += (row, kind) => OnCrash();
             _session.TrickPerformed += p =>
             {
                 _character.Trick();
                 _sfx.PlayOneShot(_powerClip, 0.7f);
                 Burst(_player.position + Vector3.up * 1.4f, NeonCyan, 30);
-                _hud?.Popup("Salto! +" + p, NeonCyan);
+                _hud?.Popup(L.T("popup.trick", p), NeonCyan);
             };
             _input = new RunnerInput();
 
@@ -112,6 +114,7 @@ namespace WorldRush.Runtime
             BuildParticles();
             BuildAudio();
             BuildLevelView();
+            ApplySettings();
 
             _hud = gameObject.AddComponent<HudOverlay>();
             _hud.Init(this);
@@ -131,7 +134,7 @@ namespace WorldRush.Runtime
         public void GoToMenu()
         {
             if (_session.State == GameState.GameOver || _session.State == GameState.Won)
-                LastRunText = $"Letzte Runde: {(int)_session.Score.Distance} m · {_session.Score.Coins} Münzen · {_session.Score.Score} Punkte";
+                LastRunText = L.T("menu.lastRun", (int)_session.Score.Distance, _session.Score.Coins, _session.Score.Score);
             ClearViews();
             _session.ReturnToReady();
             _menuSince = Time.unscaledTime;
@@ -179,6 +182,7 @@ namespace WorldRush.Runtime
                         _session.Enqueue(c);
                     }
                     _session.Tick(Time.deltaTime);
+                    UpdateTutorial();
                     break;
             }
 
@@ -217,6 +221,66 @@ namespace WorldRush.Runtime
 
         private int _bankedCoins;
 
+        // ---------- Einstellungen & Tutorial ----------
+
+        private const string SettingsKey = "fs-settings";
+        private Volume _postFx;
+        private DepthOfField _dof;
+        private readonly TutorialCoach _tutorial = new TutorialCoach();
+
+        public GameSettings Settings { get; private set; } = new GameSettings();
+        /// <summary>Aktueller Tutorial-Hinweis (Text-Schlüssel) oder null.</summary>
+        public string TutorialHint { get; private set; }
+
+        private void LoadSettings()
+        {
+            string json = PlayerPrefs.GetString(SettingsKey, "");
+            Settings = GameSettings.FromJson(json);
+            if (string.IsNullOrEmpty(json))
+                Settings.Language = Application.systemLanguage == SystemLanguage.German ? Language.German : Language.English;
+            L.Current = Settings.Language;
+        }
+
+        public void SaveSettings()
+        {
+            PlayerPrefs.SetString(SettingsKey, Settings.ToJson());
+            PlayerPrefs.Save();
+            ApplySettings();
+        }
+
+        /// <summary>Lautstärken, Sprache und Grafikstufe anwenden (0 = sparsam für schwache Handys).</summary>
+        public void ApplySettings()
+        {
+            L.Current = Settings.Language;
+            if (_music != null) _music.volume = 0.45f * Settings.MusicVolume;
+            if (_sfx != null) _sfx.volume = Settings.SfxVolume;
+            int q = Settings.Quality;
+            if (_postFx != null) _postFx.gameObject.SetActive(q >= 1);
+            if (_dof != null) _dof.active = q >= 2;
+            if (_sun != null) _sun.shadows = q == 0 ? LightShadows.None : LightShadows.Soft;
+            if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
+            {
+                urp.msaaSampleCount = q == 2 ? 4 : q == 1 ? 2 : 1;
+                urp.shadowDistance = q == 2 ? 70f : q == 1 ? 45f : 0f;
+            }
+        }
+
+        public void ReplayTutorial()
+        {
+            Settings.TutorialDone = false;
+            SaveSettings();
+        }
+
+        private void UpdateTutorial()
+        {
+            TutorialHint = _tutorial.Update(_session);
+            if (_tutorial.Finished && !_tutorial.Active && !Settings.TutorialDone)
+            {
+                Settings.TutorialDone = true;
+                SaveSettings();
+            }
+        }
+
         /// <summary>Münzen der laufenden Runde aufs Konto buchen (ohne doppelt zu zählen).</summary>
         private void BankCoins()
         {
@@ -235,7 +299,12 @@ namespace WorldRush.Runtime
             SaveNow();
         }
 
-        private void OnApplicationPause(bool paused) { if (paused) BankAndSave(); }
+        private void OnApplicationPause(bool paused)
+        {
+            if (!paused) return;
+            if (_session != null && _session.State == GameState.Running) _session.Pause(); // Anruf / App-Wechsel: Spiel anhalten
+            BankAndSave();
+        }
         private void OnApplicationQuit() => BankAndSave();
         private void OnDisable() => BankAndSave();
 
@@ -243,7 +312,12 @@ namespace WorldRush.Runtime
         {
             if (state == GameState.GameOver) _gameOverSince = Time.unscaledTime;
             if (state == GameState.Ready) _menuSince = Time.unscaledTime;
-            if (state == GameState.Running && _session.Score.Coins == 0) _bankedCoins = 0; // neue Runde
+            if (state == GameState.Running && _session.Score.Coins == 0)
+            {
+                _bankedCoins = 0; // neue Runde
+                if (!Settings.TutorialDone) _tutorial.Begin();
+            }
+            if (state != GameState.Running) TutorialHint = null;
             if (state == GameState.Running && !_music.isPlaying) _music.Play();
             if (state == GameState.Won)
             {
@@ -260,7 +334,7 @@ namespace WorldRush.Runtime
             foreach (var m in _missions.ApplyRun(RunStats.From(_session)))
             {
                 _save.Wallet += m.Reward;
-                _hud?.Popup($"Aufgabe geschafft! +{m.Reward} Münzen", Sun);
+                _hud?.Popup(L.T("popup.mission", m.Reward), Sun);
             }
             _missions.Store(_save);
             _save.HighScore = Mathf.Max(_save.HighScore, _session.Score.HighScore);
@@ -289,7 +363,7 @@ namespace WorldRush.Runtime
             _shake = 0.3f;
             Burst(new Vector3(_session.Motor.LateralX, 1.5f, row.Z), Violet, 60);
             if (_rowViews.TryGetValue(row.Id, out var view)) { Destroy(view); _rowViews.Remove(row.Id); }
-            _hud?.Popup("Schild!", Violet);
+            _hud?.Popup(L.T("popup.shield"), Violet);
         }
 
         private void OnCrash()
@@ -301,7 +375,7 @@ namespace WorldRush.Runtime
         }
 
         public static string PowerName(PowerUpKind k) =>
-            k == PowerUpKind.Board ? "Surfboard" : k == PowerUpKind.Magnet ? "Magnet" : k == PowerUpKind.Shield ? "Schild" : "2× Punkte";
+            L.T(k == PowerUpKind.Board ? "power.board" : k == PowerUpKind.Magnet ? "power.magnet" : k == PowerUpKind.Shield ? "power.shield" : "power.double");
 
         public static Color PowerColor(PowerUpKind k) =>
             k == PowerUpKind.Board ? NeonCyan : k == PowerUpKind.Magnet ? new Color(1f, 0.35f, 0.43f) : k == PowerUpKind.Shield ? Violet : Sun;
@@ -519,6 +593,7 @@ namespace WorldRush.Runtime
                 var volumeGo = new GameObject("PostFX");
                 volumeGo.transform.SetParent(transform, false);
                 var volume = volumeGo.AddComponent<Volume>();
+                _postFx = volume;
                 volume.isGlobal = true;
                 volume.priority = 10f;
                 var profile = ScriptableObject.CreateInstance<VolumeProfile>();
@@ -534,6 +609,7 @@ namespace WorldRush.Runtime
                 var tone = profile.Add<Tonemapping>(true);
                 tone.mode.Override(TonemappingMode.Neutral);
                 var dof = profile.Add<DepthOfField>(true);
+                _dof = dof;
                 dof.mode.Override(DepthOfFieldMode.Gaussian);
                 dof.gaussianStart.Override(45f);
                 dof.gaussianEnd.Override(150f);
@@ -780,7 +856,7 @@ namespace WorldRush.Runtime
         private readonly List<(Mesh mesh, Vector3[] baseVertices, Vector3[] buffer, Transform transform)> _waters = new List<(Mesh, Vector3[], Vector3[], Transform)>();
 
         public int LevelIndex => _levelIndex;
-        public string LevelLabel => $"Level {_levelIndex + 1} · {_session.Level?.Name}";
+        public string LevelLabel => L.T("menu.level", _levelIndex + 1, _session.Level?.Name);
         public static int LevelStars(int index) => PlayerPrefs.GetInt("fs-stars-" + index, 0);
         public static int UnlockedLevels { get { int u = 0; while (LevelStars(u) > 0 && u < 999) u++; return u; } }
         public bool CanGoNextLevel => _levelIndex < UnlockedLevels;
