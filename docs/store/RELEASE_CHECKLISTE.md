@@ -29,7 +29,7 @@ Reihenfolge von oben nach unten. ✅ = in der App/im Projekt erledigt.
 4. Salto in der Luft
 5. Sterne-Bildschirm im Ziel
 6. Surfbrett-Shop
-→ In Unity: Game-Fenster auf **1920×1080** stellen, ▶, an der Stelle **Pause**, Screenshot (Windows + Shift + S).
+→ In Unity: Game-Fenster auf **1920×1080** stellen, ▶, an der passenden Stelle **F12** drücken – der Screenshot landet in doppelter Auflösung im Ordner `StoreAssets/Screenshots`.
 
 ## D. Vor jedem Update
 - Version in `Assets/_WorldRush/Scripts/Core/ProductInfo.cs` erhöhen (z. B. 0.4.0 → 0.4.1), dann Menü 6 und 7.

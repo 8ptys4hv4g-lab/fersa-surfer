@@ -96,7 +96,19 @@ namespace WorldRush.Runtime
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P)) PausePressed = true;
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space)) ConfirmPressed = true;
 
-            if (Input.GetMouseButtonDown(0)) _swipe.Begin(Input.mousePosition.x, Input.mousePosition.y, now);
+            // Touch direkt auswerten (Handy/Tablet); Maus nur, wenn kein Finger auf dem Bildschirm ist.
+            if (Input.touchCount > 0)
+            {
+                var t = Input.GetTouch(0);
+                switch (t.phase)
+                {
+                    case TouchPhase.Began: _swipe.Begin(t.position.x, t.position.y, now); break;
+                    case TouchPhase.Moved: Add(_swipe.Update(t.position.x, t.position.y, now)); break;
+                    case TouchPhase.Ended: Add(_swipe.End(t.position.x, t.position.y, now)); break;
+                    case TouchPhase.Canceled: _swipe.Cancel(); break;
+                }
+            }
+            else if (Input.GetMouseButtonDown(0)) _swipe.Begin(Input.mousePosition.x, Input.mousePosition.y, now);
             else if (Input.GetMouseButton(0)) Add(_swipe.Update(Input.mousePosition.x, Input.mousePosition.y, now));
             else if (Input.GetMouseButtonUp(0)) Add(_swipe.End(Input.mousePosition.x, Input.mousePosition.y, now));
 #endif

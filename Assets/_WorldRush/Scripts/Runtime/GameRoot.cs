@@ -163,6 +163,7 @@ namespace WorldRush.Runtime
         {
             var commands = _input.Poll();
             if (_input.PausePressed) _session.TogglePause();
+            if (Input.GetKeyDown(KeyCode.F12)) TakeStoreScreenshot();
 
             switch (_session.State)
             {
@@ -220,6 +221,21 @@ namespace WorldRush.Runtime
         // ---------- Ereignisse ----------
 
         private int _bankedCoins;
+
+        /// <summary>F12: Store-Screenshot in doppelter Auflösung (Editor: Ordner StoreAssets/Screenshots).</summary>
+        private void TakeStoreScreenshot()
+        {
+#if UNITY_EDITOR
+            string dir = "StoreAssets/Screenshots";
+#else
+            string dir = Path.Combine(Application.persistentDataPath, "Screenshots");
+#endif
+            Directory.CreateDirectory(dir);
+            string file = Path.Combine(dir, $"fersa-{System.DateTime.Now:yyyyMMdd-HHmmss}.png");
+            ScreenCapture.CaptureScreenshot(file, 2);
+            _hud?.Popup("Screenshot!", NeonCyan);
+            Debug.Log("[FersaSurfer] Screenshot gespeichert: " + Path.GetFullPath(file));
+        }
 
         // ---------- Einstellungen & Tutorial ----------
 
@@ -362,7 +378,7 @@ namespace WorldRush.Runtime
             _sfx.PlayOneShot(_crashClip, 0.5f);
             _shake = 0.3f;
             Burst(new Vector3(_session.Motor.LateralX, 1.5f, row.Z), Violet, 60);
-            if (_rowViews.TryGetValue(row.Id, out var view)) { Destroy(view); _rowViews.Remove(row.Id); }
+            if (_rowViews.TryGetValue(row.Id, out var view)) { _rowKeys.Remove(view); Destroy(view); _rowViews.Remove(row.Id); }
             _hud?.Popup(L.T("popup.shield"), Violet);
         }
 
@@ -400,9 +416,9 @@ namespace WorldRush.Runtime
             foreach (var row in _session.Rows)
             {
                 _seen.Add(row.Id);
-                if (!_rowViews.ContainsKey(row.Id) && !row.IsEmpty) _rowViews[row.Id] = CreateRowView(row, cfg);
+                if (!_rowViews.ContainsKey(row.Id) && !row.IsEmpty) _rowViews[row.Id] = GetRowView(row, cfg);
             }
-            RemoveUnseen(_rowViews, go => Destroy(go));
+            RemoveUnseen(_rowViews, ReleaseRowView);
 
             // Münzen (gepoolt), mit Magnet-Sog
             bool magnet = _session.IsPowerActive(PowerUpKind.Magnet);
@@ -462,12 +478,51 @@ namespace WorldRush.Runtime
 
         private void ClearViews()
         {
-            foreach (var go in _rowViews.Values) Destroy(go);
+            foreach (var go in _rowViews.Values) ReleaseRowView(go);
             _rowViews.Clear();
             foreach (var go in _powerViews.Values) Destroy(go);
             _powerViews.Clear();
             foreach (var go in _coinViews.Values) { go.SetActive(false); _coinPool.Push(go); }
             _coinViews.Clear();
+        }
+
+        // ---------- Wiederverwendung von Hindernis-Ansichten (weniger Ruckler auf Handys) ----------
+
+        private readonly Dictionary<string, Stack<GameObject>> _rowPool = new Dictionary<string, Stack<GameObject>>();
+        private readonly Dictionary<GameObject, string> _rowKeys = new Dictionary<GameObject, string>();
+
+        private string RowKey(ObstacleRow row)
+        {
+            bool water = _session.Level != null && _session.Level.IsWater(row.Z);
+            return $"{(int)row.Slots[0]}{(int)row.Slots[1]}{(int)row.Slots[2]}{(water ? "w" : "l")}";
+        }
+
+        private GameObject GetRowView(ObstacleRow row, RunnerConfig cfg)
+        {
+            string key = RowKey(row);
+            if (_rowPool.TryGetValue(key, out var stack) && stack.Count > 0)
+            {
+                var go = stack.Pop();
+                if (go != null)
+                {
+                    go.transform.position = new Vector3(0f, 0f, row.Z);
+                    go.SetActive(true);
+                    return go;
+                }
+            }
+            var created = CreateRowView(row, cfg);
+            _rowKeys[created] = key;
+            return created;
+        }
+
+        private void ReleaseRowView(GameObject go)
+        {
+            if (go == null) return;
+            if (!_rowKeys.TryGetValue(go, out var key)) { Destroy(go); return; }
+            go.SetActive(false);
+            if (!_rowPool.TryGetValue(key, out var stack)) _rowPool[key] = stack = new Stack<GameObject>();
+            if (stack.Count < 6) stack.Push(go);
+            else { _rowKeys.Remove(go); Destroy(go); }
         }
 
         private GameObject CreateRowView(ObstacleRow row, RunnerConfig cfg)

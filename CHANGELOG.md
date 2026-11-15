@@ -3,6 +3,10 @@
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
+### Verbessert
+- Touch-Wischgesten direkt vom Finger (zuverlässiger auf Handys/Tablets).
+- Hindernis-Ansichten werden wiederverwendet statt neu gebaut (weniger Ruckler auf schwachen Geräten).
+- F12 im Spiel: Store-Screenshot in doppelter Auflösung (`StoreAssets/Screenshots`).
 
 ## [0.4.0] – 2026-11-15 · Store-Vorbereitung
 ### Hinzugefügt
