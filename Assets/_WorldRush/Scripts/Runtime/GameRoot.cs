@@ -1049,11 +1049,13 @@ namespace WorldRush.Runtime
             foreach (var prop in new[] { "_BaseColor", "_Color", "_MainColor", "_Tint" })
                 if (m.HasProperty(prop)) { color = m.GetColor(prop); foundColor = true; break; }
             if (!foundColor)
-                foreach (var prop in m.GetPropertyNames(MaterialPropertyType.Vector))
-                {
-                    string lp = prop.ToLowerInvariant();
-                    if (lp.Contains("color") || lp.Contains("tint") || lp.Contains("albedo")) { color = m.GetColor(prop); break; }
-                }
+                if (shader != null)
+                    for (int i = 0; i < shader.GetPropertyCount(); i++)
+                    {
+                        if (shader.GetPropertyType(i) != ShaderPropertyType.Color) continue;
+                        string prop = shader.GetPropertyName(i), lp = prop.ToLowerInvariant();
+                        if (lp.Contains("color") || lp.Contains("tint") || lp.Contains("albedo")) { color = m.GetColor(prop); break; }
+                    }
             if (color.a < 0.05f) color.a = 1f;
             if (tex != null) { lit.SetTexture("_BaseMap", tex); lit.mainTextureScale = m.mainTextureScale; }
             lit.SetColor("_BaseColor", color);

@@ -27,6 +27,7 @@ cd tools/CoreTests && dotnet test
 ```
 
   Sie müssen grün sein.
+- **Vor jedem Push von Unity-Code:** `tools/UnityCompileCheck/check.sh` ausführen (kompiliert Runtime + Editor gegen Unity-Referenzen). Erwartet sind nur Meldungen zu APIs, die neuer als Unity 2021 sind; alle anderen Fehler müssen behoben sein.
 - Keine handgeschriebenen `.unity`-, `.prefab`- oder `.mat`-Dateien. Solche Dateien erzeugt Unity selbst, zum Beispiel über Editor-Menüs.
 - Neue Pakete nur mit klarer Lizenz. Keine kostenpflichtigen Dienste oder Assets ohne Freigabe.
 - **Keine API-Schlüssel und Passwörter im Repository oder in der App.**
