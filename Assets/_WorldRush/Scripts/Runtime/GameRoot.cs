@@ -54,6 +54,8 @@ namespace WorldRush.Runtime
         private readonly Stack<GameObject> _coinPool = new Stack<GameObject>();
         private readonly List<Transform> _groundTiles = new List<Transform>();
         private readonly List<Transform> _scenery = new List<Transform>();
+        /// <summary>Straßen-Objekte (Autos, Deko), die im Wasser-Abschnitt nicht stehen dürfen.</summary>
+        private readonly HashSet<Transform> _streetOnly = new HashSet<Transform>();
         private readonly HashSet<int> _seen = new HashSet<int>();
         private readonly List<int> _remove = new List<int>();
         private HudOverlay _hud;
@@ -315,6 +317,12 @@ namespace WorldRush.Runtime
                 if (z < _session.PlayerZ - 20f) z += SceneryLoop;
                 else if (z > _session.PlayerZ + SceneryLoop) z -= SceneryLoop * Mathf.Ceil((z - _session.PlayerZ - 20f) / SceneryLoop);
                 b.position = new Vector3(b.position.x, b.position.y, z);
+                if (_streetOnly.Contains(b))
+                {
+                    var lvl = _session.Level;
+                    bool inWater = lvl != null && (lvl.IsWater(z) || lvl.IsWater(z - 3f) || lvl.IsWater(z + 3f));
+                    if (b.gameObject.activeSelf == inWater) b.gameObject.SetActive(!inWater);
+                }
             }
         }
 
@@ -585,7 +593,7 @@ namespace WorldRush.Runtime
                     crown.transform.localPosition = new Vector3(0, 2.2f, 0);
                     crown.transform.localScale = Vector3.one * rnd.Range(1.8f, 2.6f);
                     tree.position = new Vector3(side * (trackWidth * 0.5f + 5.6f + rnd.Range(0f, 0.6f)), 0.98f, i * (SceneryLoop / 30f));
-                    _scenery.Add(tree);
+                    _scenery.Add(tree); _streetOnly.Add(tree);
                 }
                 if (i % 3 == 0)
                 {
@@ -596,7 +604,7 @@ namespace WorldRush.Runtime
                         Box(lamp, laneLineMaterial, new Vector3(0, 2f, 0), new Vector3(0.12f, 4f, 0.12f));
                         Box(lamp, lampMat, new Vector3(-side * 0.5f, 4f, 0), new Vector3(1.1f, 0.14f, 0.3f));
                         lamp.position = new Vector3(side * (trackWidth * 0.5f + 2.9f), 0.18f, i * (SceneryLoop / 30f) + 3f);
-                        _scenery.Add(lamp);
+                        _scenery.Add(lamp); _streetOnly.Add(lamp);
                     }
                 }
             }
@@ -643,6 +651,7 @@ namespace WorldRush.Runtime
                             var prefab = kit.Cars[rnd.Range(0, kit.Cars.Count)];
                             var go = EnvironmentKit.Spawn(prefab, transform, new Vector3(side * (half + 1.3f), 0f, z), rnd.NextFloat() < 0.5f ? 0f : 180f, 4.3f, false, 2.4f);
                             _scenery.Add(go.transform);
+                            _streetOnly.Add(go.transform);
                         StyleModel(go);
                         }
                         z += rnd.Range(6f, 14f);
@@ -660,6 +669,7 @@ namespace WorldRush.Runtime
                     var go = EnvironmentKit.Spawn(prefab, transform, new Vector3(side * (half + 3.6f + rnd.Range(0f, 1.6f)), 0.18f, i * (SceneryLoop / 40f) + rnd.Range(0f, 3f)),
                         side < 0 ? 90f : -90f, tall ? 4.5f : 0f, tall, tall ? 6f : 2.2f);
                     _scenery.Add(go.transform);
+                    _streetOnly.Add(go.transform);
                         StyleModel(go);
                 }
             }
