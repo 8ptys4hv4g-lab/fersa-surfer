@@ -34,3 +34,9 @@ Reihenfolge von oben nach unten. ✅ = in der App/im Projekt erledigt.
 ## D. Vor jedem Update
 - Version in `Assets/_WorldRush/Scripts/Core/ProductInfo.cs` erhöhen (z. B. 0.4.0 → 0.4.1), dann Menü 6 und 7.
 - `cd tools/CoreTests && dotnet test` und `tools/UnityCompileCheck/check.sh` müssen sauber sein.
+
+## E. Ohne Android-Gerät testen
+- **Web-Version auf iPad/iPhone (kostenlos):** Menü **Fersa Wave → 8. Web-Version bauen** → ZIP auf **itch.io** hochladen (Projektart *HTML*, „played in the browser“, Sichtbarkeit *Draft/Restricted*) → Link in Safari öffnen.
+- **Android-Emulator am PC (kostenlos):** Android Studio installieren → *Device Manager* → virtuelles Handy anlegen (aktuelles Android, x86_64-Abbild) → in Unity bei Android zusätzlich *x86_64* als Architektur anhaken → *Build And Run*.
+- **Google-Pflichttest (12 Tester, 14 Tage):** Tester brauchen Android-Geräte – Familie/Freunde fragen. Ein gebrauchtes Android-Handy (ca. 50–80 €) ist für eigene Tests praktisch, aber nicht Pflicht.
+- **Apple App Store (später):** Apple Developer Program (99 $/Jahr) + Mac oder Mac-Cloud-Dienst für den Build.

@@ -103,6 +103,39 @@ namespace WorldRush.EditorTools
             if (ok) EditorUtility.RevealInFinder(path);
         }
 
+        [MenuItem("Fersa Wave/8. Web-Version bauen (für iPad/iPhone im Browser)", priority = 22)]
+        public static void BuildWeb()
+        {
+            var scenes = new System.Collections.Generic.List<string>();
+            foreach (var sc in EditorBuildSettings.scenes) if (sc.enabled) scenes.Add(sc.path);
+            if (scenes.Count == 0) { FersaSurferSetupMenu.CreateDemoScene(); scenes.Add("Assets/_WorldRush/Scenes/RunnerDemo.unity"); }
+
+            PlayerSettings.productName = ProductInfo.DisplayName;
+            PlayerSettings.bundleVersion = ProductInfo.Version;
+            // Gzip + Fallback: läuft auf itch.io und jedem einfachen Webserver ohne Sonder-Einstellungen
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.decompressionFallback = true;
+            PlayerSettings.WebGL.dataCaching = true;
+
+            string dir = "Builds/Web";
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            Directory.CreateDirectory(dir);
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = scenes.ToArray(), locationPathName = dir, target = BuildTarget.WebGL, options = BuildOptions.None });
+            bool ok = report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded;
+            string zip = $"Builds/FersaWave-Web-{ProductInfo.Version}.zip";
+            if (ok)
+            {
+                if (File.Exists(zip)) File.Delete(zip);
+                System.IO.Compression.ZipFile.CreateFromDirectory(dir, zip);
+            }
+            string text = ok
+                ? $"Fertig: {zip}\n\nAuf itch.io hochladen:\n1. itch.io → 'Upload new project'\n2. Kind of project: HTML\n3. ZIP hochladen, 'This file will be played in the browser' anhaken\n4. Sichtbarkeit: 'Draft' oder 'Restricted' (mit Passwort)\n5. Link auf iPad/iPhone in Safari öffnen."
+                : $"Build fehlgeschlagen ({report.summary.totalErrors} Fehler). Falls 'Web' fehlt: Unity Hub → Installationen → Unity 6.6 → Module hinzufügen → 'Web Build Support'.";
+            Debug.Log("[FersaWave] " + text.Replace("\n", " | "));
+            EditorUtility.DisplayDialog("Fersa Wave – Web", text, "OK");
+            if (ok) EditorUtility.RevealInFinder(zip);
+        }
+
         /// <summary>Versionscode aus "Major.Minor.Patch", z. B. 0.3.0 → 300, 1.2.5 → 10205.</summary>
         public static int VersionCode(string version)
         {
