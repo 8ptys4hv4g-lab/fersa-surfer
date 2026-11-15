@@ -19,6 +19,8 @@ namespace WorldRush.Runtime
         private readonly WorldEditorPanel _worldPanel = new WorldEditorPanel();
         private bool _showCredits;
         private bool _settingsDirty;
+        private string _confirm = "";
+        private string _settingsMessage = "";
         private string _shopMessage = "";
         private List<string> _outfitFeedback = new List<string>();
         private readonly List<(string text, Color color, float time)> _popups = new List<(string, Color, float)>();
@@ -224,7 +226,7 @@ namespace WorldRush.Runtime
                 1 => 400 * k,
                 2 => (160 + BoardShop.Items.Length * 64) * k,
                 3 => Mathf.Min(620 * k, Screen.height - 150 * k),
-                4 => (_showCredits ? 460 : 500) * k,
+                4 => (_showCredits ? 460 : 640) * k,
                 _ => 540 * k
             };
             card.height = panelHeight;
@@ -248,7 +250,7 @@ namespace WorldRush.Runtime
                 var r = new Rect(x + i * (w + 10 * k), y, w, 48 * k);
                 var prev = GUI.color;
                 if (i == _tab) GUI.color = GameRoot.NeonCyan;
-                if (GUI.Button(r, L.T(TabKeys[i]), _button)) { _tab = i; _shopMessage = ""; _showCredits = false; }
+                if (GUI.Button(r, L.T(TabKeys[i]), _button)) { _tab = i; _shopMessage = ""; _showCredits = false; _confirm = ""; _settingsMessage = ""; }
                 GUI.color = prev;
             }
         }
@@ -261,6 +263,13 @@ namespace WorldRush.Runtime
             GUI.Label(new Rect(card.x, card.y + 16 * k, card.width, 70 * k), ProductInfo.DisplayName, titleStyle);
             GUI.Label(new Rect(card.x + 20 * k, card.y + 90 * k, card.width - 40 * k, 60 * k),
                 string.IsNullOrEmpty(_root.LastRunText) ? L.T("menu.controls") : _root.LastRunText, _mid);
+            if (_root.CustomWorldActive)
+            {
+                var prev = GUI.color;
+                GUI.color = GameRoot.Sun;
+                GUI.Label(new Rect(card.x, card.y + 66 * k, card.width, 26 * k), L.T("menu.customWorld"), _chip);
+                GUI.color = prev;
+            }
             GUI.Label(new Rect(card.x + 20 * k, card.y + 160 * k, card.width - 40 * k, 30 * k), L.T("menu.outfit"), _small);
             _outfitText = GUI.TextField(new Rect(card.x + 20 * k, card.y + 194 * k, card.width - 190 * k, 44 * k), _outfitText ?? "", 200, _field);
             if (GUI.Button(new Rect(card.xMax - 160 * k, card.y + 194 * k, 140 * k, 44 * k), L.T("menu.wear"), _button))
@@ -395,6 +404,23 @@ namespace WorldRush.Runtime
             float bw = (card.width - 68 * k) * 0.5f;
             if (GUI.Button(new Rect(x, y, bw, 54 * k), L.T("settings.tutorial"), _button)) _root.ReplayTutorial();
             if (GUI.Button(new Rect(x + bw + 20 * k, y, bw, 54 * k), L.T("settings.credits"), _button)) _showCredits = true;
+            y += 70 * k;
+
+            // Zurücksetzen – mit Bestätigung (zweimal tippen)
+            if (GUI.Button(new Rect(x, y, bw, 54 * k), _confirm == "world" ? L.T("settings.confirm") : L.T("settings.resetWorld"), _button))
+            {
+                if (_confirm == "world") { _root.RestoreDefaultCity(); _confirm = ""; _settingsMessage = L.T("settings.resetDone"); }
+                else { _confirm = "world"; _settingsMessage = ""; }
+            }
+            var prevColor = GUI.color;
+            if (_confirm == "all") GUI.color = new Color(1f, 0.55f, 0.55f);
+            if (GUI.Button(new Rect(x + bw + 20 * k, y, bw, 54 * k), _confirm == "all" ? L.T("settings.confirm") : L.T("settings.resetAll"), _button))
+            {
+                if (_confirm == "all") { _confirm = ""; _root.ResetEverything(); }
+                else { _confirm = "all"; _settingsMessage = ""; }
+            }
+            GUI.color = prevColor;
+            if (_settingsMessage.Length > 0) GUI.Label(new Rect(card.x, y + 60 * k, card.width, 30 * k), _settingsMessage, _chip);
 
             // Sofort anwenden; speichern erst, wenn kein Regler mehr gezogen wird (nicht bei jedem Pixel).
             if (changed) { _root.ApplySettings(); _settingsDirty = true; }

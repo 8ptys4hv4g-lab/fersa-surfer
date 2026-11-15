@@ -309,6 +309,28 @@ namespace WorldRush.Runtime
             return notes;
         }
 
+        /// <summary>Standard-Stadt zurück und eigene Welt löschen.</summary>
+        public void RestoreDefaultCity()
+        {
+            UseStandardWorld();
+            WorldDoc = new DrawingDocument();
+            try { _worlds?.Delete(CustomWorldId); } catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] " + e.Message); }
+        }
+
+        /// <summary>Alles auf Anfang: Spielstand, Sterne, Bretter, Einstellungen, eigene Welt. Lädt die Szene neu.</summary>
+        public void ResetEverything()
+        {
+            RestoreDefaultCity();
+            _resetting = true;
+            foreach (var path in new[] { _saveRepo.FilePath, _saveRepo.BackupPath })
+                try { if (File.Exists(path)) File.Delete(path); } catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] " + e.Message); }
+            PlayerPrefs.DeleteAll();
+            PlayerPrefs.Save();
+            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+        }
+
+        private bool _resetting;
+
         /// <summary>Zurück zur normalen Stadt.</summary>
         public void UseStandardWorld()
         {
@@ -458,7 +480,7 @@ namespace WorldRush.Runtime
         /// <summary>Beim Stoppen, Schließen oder Wegwechseln: Münzen sichern.</summary>
         private void BankAndSave()
         {
-            if (_session == null || _save == null) return;
+            if (_session == null || _save == null || _resetting) return; // beim Zurücksetzen nichts zurückschreiben
             BankCoins();
             SaveNow();
         }

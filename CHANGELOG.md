@@ -4,6 +4,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen na
 
 ## [Unveröffentlicht]
 ### Hinzugefügt
+- Optionen: „Standard-Stadt wiederherstellen“ und „Alles zurücksetzen“ (jeweils mit Bestätigung); Hinweis im Startmenü, wenn eine eigene Welt aktiv ist.
+### Hinzugefügt
 - Welt-Editor im Unity-Spiel (Tab „Welt“): Häuser, Baumreihen und Gärten zeichnen → „In 3D bauen“ → eigene Welt wird gespeichert und beim nächsten Start wieder geladen; Beispiel-Welt; zurück zur Standard-Stadt.
 ### Verbessert
 - Touch-Wischgesten direkt vom Finger (zuverlässiger auf Handys/Tablets).
