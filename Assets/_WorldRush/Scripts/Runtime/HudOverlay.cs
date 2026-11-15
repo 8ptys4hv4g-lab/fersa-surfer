@@ -177,7 +177,8 @@ namespace WorldRush.Runtime
                         GUI.Label(new Rect(card.x + 90 * k, ry, card.width - 180 * k, 44 * k), "Figur: " + _root.CharacterName, new GUIStyle(_mid) { fontSize = (int)(22 * k) });
                         if (GUI.Button(new Rect(card.xMax - 80 * k, ry, 60 * k, 44 * k), ">", _button)) _outfitFeedback = _root.NextCharacter(1) ?? _outfitFeedback;
                     }
-                    if (GUI.Button(new Rect(card.x + (card.width - 260 * k) * 0.5f, card.yMax - 90 * k, 260 * k, 66 * k), "Spielen", _button)) _root.StartRun();
+                    if (GUI.Button(new Rect(card.x + card.width * 0.5f - 270 * k, card.yMax - 90 * k, 250 * k, 66 * k), "Spielen", _button)) _root.StartRun();
+                    if (GUI.Button(new Rect(card.x + card.width * 0.5f + 20 * k, card.yMax - 90 * k, 250 * k, 66 * k), "Surfen ansehen", _button)) _root.StartAtWater();
                     break;
                 case GameState.Paused:
                     card.height = 220 * k;

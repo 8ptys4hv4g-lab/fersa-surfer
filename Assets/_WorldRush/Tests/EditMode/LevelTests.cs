@@ -70,6 +70,20 @@ namespace WorldRush.Tests
         }
 
         [Test]
+        public void WarpToWaterPutsPlayerInWaterSafely()
+        {
+            var level = LevelDefinition.Create(0);
+            var s = new GameSession(RunnerConfig.CreateDefault(), 3, 0, level);
+            s.Start();
+            s.WarpTo(level.Water[0].start + 2f);
+            Assert.IsTrue(s.IsInWater);
+            Assert.Greater(s.Invulnerable, 0f);
+            foreach (var r in s.Rows) Assert.Greater(r.Z, s.PlayerZ + 7f);
+            for (int i = 0; i < 120; i++) s.Tick(Frame);
+            Assert.AreEqual(GameState.Running, s.State);
+        }
+
+        [Test]
         public void NoTrickOnLand()
         {
             var s = new GameSession(RunnerConfig.CreateDefault(), 1, 0, new LevelDefinition(0, "Land", 2000f, null));

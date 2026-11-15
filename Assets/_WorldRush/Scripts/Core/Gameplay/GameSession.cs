@@ -62,6 +62,24 @@ namespace WorldRush.Core
         public int Stars => LevelDefinition.StarsFor(Score.Coins, LevelCoinsTotal);
         private bool _trickUsed;
 
+        /// <summary>
+        /// Springt direkt zu einer Stelle der Strecke (z. B. "Surfen ansehen"). Alte Hindernisse werden entfernt,
+        /// die Figur ist kurz unverwundbar.
+        /// </summary>
+        public void WarpTo(float z, float invulnerableSeconds = 4f)
+        {
+            if (z <= PlayerZ) return;
+            float moved = z - PlayerZ;
+            PlayerZ = z;
+            Score.AddDistance(moved);
+            _rows.RemoveAll(r => r.Z < PlayerZ + 8f);
+            _coins.RemoveAll(c => c.Z < PlayerZ);
+            _powerUps.RemoveAll(p => p.Z < PlayerZ);
+            Invulnerable = Math.Max(Invulnerable, invulnerableSeconds);
+            Generate();
+            _rows.RemoveAll(r => r.Z < PlayerZ + 8f);
+        }
+
         /// <summary>Wechselt das Level (setzt die Runde zurück).</summary>
         public void SetLevel(LevelDefinition level)
         {

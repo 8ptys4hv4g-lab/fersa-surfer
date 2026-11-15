@@ -731,6 +731,16 @@ namespace WorldRush.Runtime
             SetLevel(target);
         }
 
+        /// <summary>Startet das Level direkt am ersten Wasser-Abschnitt (zum Anschauen).</summary>
+        public void StartAtWater()
+        {
+            if (_session.Level == null || _session.Level.Water.Count == 0) { StartRun(); return; }
+            if (_session.State != GameState.Ready) Restart(); else _session.Start();
+            if (_session.State == GameState.Ready) _session.Start();
+            _session.WarpTo(_session.Level.Water[0].start + 3f, 6f);
+            ClearViews();
+        }
+
         public void NextLevel()
         {
             SetLevel(Mathf.Min(_levelIndex + 1, UnlockedLevels));
