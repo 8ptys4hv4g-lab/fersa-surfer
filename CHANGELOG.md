@@ -3,6 +3,8 @@
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
+### Geändert
+- Schnelleres Spielgefühl: Start 13 m/s (vorher 10), Höchsttempo 27 m/s (vorher 24), Tempo steigt schneller (0,22 statt 0,15 m/s²). Alle 132 Tests inkl. Test-Bot-Durchläufe bestanden.
 ### Hinzugefügt
 - Optionen: „Standard-Stadt wiederherstellen“ und „Alles zurücksetzen“ (jeweils mit Bestätigung); Hinweis im Startmenü, wenn eine eigene Welt aktiv ist.
 ### Hinzugefügt

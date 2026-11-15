@@ -11,9 +11,9 @@ namespace WorldRush.Core
         public float LaneChangeDuration = 0.18f;
 
         // Geschwindigkeit
-        public float StartSpeed = 10f;
-        public float MaxSpeed = 24f;
-        public float Acceleration = 0.15f;
+        public float StartSpeed = 13f;
+        public float MaxSpeed = 27f;
+        public float Acceleration = 0.22f;
 
         // Springen / Rutschen
         public float JumpHeight = 1.6f;
