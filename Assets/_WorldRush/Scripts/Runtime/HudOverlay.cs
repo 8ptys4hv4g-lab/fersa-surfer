@@ -464,11 +464,10 @@ namespace WorldRush.Runtime
         private bool Swatch(Rect r, string colorId, bool selected, float k)
         {
             var prev = GUI.color;
-            if (selected)
-            {
-                GUI.color = Color.white;
-                GUI.DrawTexture(new Rect(r.x - 4 * k, r.y - 4 * k, r.width + 8 * k, r.height + 8 * k), _circleTex);
-            }
+            // Heller Rand: weiß und dick für die gewählte Farbe, sonst dezent (damit auch Schwarz sichtbar ist)
+            float ring = selected ? 4f * k : 1.5f * k;
+            GUI.color = selected ? Color.white : new Color(1f, 1f, 1f, 0.35f);
+            GUI.DrawTexture(new Rect(r.x - ring, r.y - ring, r.width + 2 * ring, r.height + 2 * ring), _circleTex);
             GUI.color = CharacterView.Palette.TryGetValue(colorId, out var c) ? c : Color.gray;
             GUI.DrawTexture(r, _circleTex);
             GUI.color = prev;
