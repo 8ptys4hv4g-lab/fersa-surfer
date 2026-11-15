@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using WorldRush.Core;
+using WorldRush.Core.World;
 
 namespace WorldRush.Runtime
 {
@@ -115,6 +116,7 @@ namespace WorldRush.Runtime
             BuildAudio();
             BuildLevelView();
             ApplySettings();
+            LoadCustomWorld();
 
             _hud = gameObject.AddComponent<HudOverlay>();
             _hud.Init(this);
@@ -221,6 +223,152 @@ namespace WorldRush.Runtime
         // ---------- Ereignisse ----------
 
         private int _bankedCoins;
+
+        // ---------- Eigene Welt (Welt-Editor) ----------
+
+        private EnvironmentKit _kit;
+        private WorldRepository _worlds;
+        private readonly List<Transform> _customScenery = new List<Transform>();
+        private const string CustomWorldId = "meine-welt";
+        private const string CustomWorldKey = "fs-custom-world";
+        private float CustomLoop => DrawingDocument.PlanLength;
+
+        /// <summary>Die Zeichnung im Welt-Editor (mit Rückgängig/Wiederholen).</summary>
+        public DrawingDocument WorldDoc { get; private set; } = new DrawingDocument();
+        public bool CustomWorldActive { get; private set; }
+
+        private void LoadCustomWorld()
+        {
+            _worlds = new WorldRepository(Path.Combine(Application.persistentDataPath, "worlds"));
+            if (!_worlds.TryLoad(CustomWorldId, out var def, out _)) return;
+            var doc = new DrawingDocument();
+            foreach (var st in def.Strokes) doc.AddStroke(st.Brush, st.Points, 0f);
+            WorldDoc = doc;
+            if (PlayerPrefs.GetInt(CustomWorldKey, 0) == 1) BuildCustomWorld(false);
+        }
+
+        /// <summary>Baut aus der Zeichnung eine echte 3D-Welt und spielt darin. Gibt Hinweise zurück (z. B. "zur Seite geschoben").</summary>
+        public List<string> BuildCustomWorld(bool save = true)
+        {
+            var def = WorldDefinition.FromDocument(WorldDoc, "Meine Welt", 4242);
+            def.WorldId = CustomWorldId;
+            var plan = def.BuildPlan();
+            ClearCustomWorld();
+            foreach (var t in _scenery) t.gameObject.SetActive(false);
+
+            var rnd = new DeterministicRandom(99);
+            foreach (var o in plan.Objects)
+            {
+                var pos = new Vector3(o.X, 0f, o.Z);
+                GameObject go;
+                switch (o.Kind)
+                {
+                    case WorldObjectKind.House:
+                        float size = Mathf.Max(o.Width, o.Depth);
+                        if (_kit != null && _kit.Buildings.Count > 0)
+                        {
+                            go = EnvironmentKit.Spawn(_kit.Buildings[rnd.Range(0, _kit.Buildings.Count)], transform, pos, o.X < 0 ? -90f : 90f, size, false, 40f);
+                            StyleModel(go);
+                        }
+                        else
+                        {
+                            go = new GameObject("House");
+                            go.transform.SetParent(transform);
+                            float h = rnd.Range(8f, 22f);
+                            var mat = MaterialFactory.Create(Color.HSVToRGB(rnd.Range(0.55f, 0.95f), 0.4f, 0.95f), 0.4f, Color.white * 1.4f);
+                            mat.SetTexture("_EmissionMap", WindowTexture());
+                            mat.mainTextureScale = new Vector2(Mathf.Max(1f, Mathf.Round(o.Width / 4f)), Mathf.Max(1f, Mathf.Round(h / 7f)));
+                            Box(go.transform, mat, new Vector3(0f, h * 0.5f, 0f), new Vector3(o.Width, h, o.Depth));
+                            go.transform.position = pos;
+                        }
+                        break;
+                    case WorldObjectKind.Tree:
+                        var treePrefab = _kit?.Props.Find(p => EnvironmentKit.NameHas(p, "tree"));
+                        if (treePrefab != null) { go = EnvironmentKit.Spawn(treePrefab, transform, pos, o.RotationY, 4.5f * o.Scale, true, 7f); StyleModel(go); }
+                        else go = SimpleTree(pos, o.Scale, rnd);
+                        break;
+                    case WorldObjectKind.Hill:
+                        go = MakePrimitive(PrimitiveType.Sphere, "Hill", transform, MaterialFactory.Create(new Color(0.45f, 0.78f, 0.45f), 0.2f));
+                        go.transform.position = pos;
+                        go.transform.localScale = new Vector3(o.Width, Mathf.Min(o.Width, o.Depth) * 0.35f, o.Depth);
+                        break;
+                    default: // Blume
+                        go = MakePrimitive(PrimitiveType.Sphere, "Flower", transform, MaterialFactory.Create(Color.HSVToRGB(rnd.Range(0f, 1f), 0.55f, 1f), 0.4f, Color.white * 0.15f));
+                        go.transform.position = pos + Vector3.up * 0.35f;
+                        go.transform.localScale = Vector3.one * 0.55f * o.Scale;
+                        break;
+                }
+                _customScenery.Add(go.transform);
+            }
+            CustomWorldActive = true;
+            PlayerPrefs.SetInt(CustomWorldKey, 1);
+            if (save) { try { _worlds?.Save(def); } catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] Welt speichern fehlgeschlagen: " + e.Message); } }
+            Debug.Log($"[FersaSurfer] Eigene Welt gebaut: {plan.Objects.Count} Objekte. " + string.Join(" | ", plan.Warnings));
+            var notes = new List<string>();
+            foreach (var w in plan.Warnings) if (!w.Contains("Straße")) notes.Add(w); // Straßen-Hinweis ist hier normal (Laufstrecke ist fest)
+            return notes;
+        }
+
+        /// <summary>Zurück zur normalen Stadt.</summary>
+        public void UseStandardWorld()
+        {
+            ClearCustomWorld();
+            foreach (var t in _scenery) t.gameObject.SetActive(true);
+            CustomWorldActive = false;
+            PlayerPrefs.SetInt(CustomWorldKey, 0);
+        }
+
+        private void ClearCustomWorld()
+        {
+            foreach (var t in _customScenery) if (t != null) Destroy(t.gameObject);
+            _customScenery.Clear();
+        }
+
+        private GameObject SimpleTree(Vector3 pos, float scale, DeterministicRandom rnd)
+        {
+            var tree = new GameObject("Tree");
+            tree.transform.SetParent(transform);
+            MakePrimitive(PrimitiveType.Cylinder, "Trunk", tree.transform, MaterialFactory.Create(new Color(0.42f, 0.27f, 0.18f), 0.2f)).transform.localScale = new Vector3(0.35f, 0.9f, 0.35f);
+            var crown = MakePrimitive(PrimitiveType.Sphere, "Crown", tree.transform, MaterialFactory.Create(Color.HSVToRGB(rnd.Range(0.25f, 0.42f), 0.55f, 0.8f), 0.3f));
+            crown.transform.localPosition = new Vector3(0f, 2.3f, 0f);
+            crown.transform.localScale = Vector3.one * 2.4f;
+            tree.transform.position = pos + Vector3.up * 0.9f;
+            tree.transform.localScale = Vector3.one * scale;
+            return tree;
+        }
+
+        /// <summary>Eigene Welt wiederholt sich alle 400 m; nahe der Strecke im Wasser ausblenden.</summary>
+        private void SyncCustomWorld()
+        {
+            foreach (var t in _customScenery)
+            {
+                if (t == null) continue;
+                float z = t.position.z;
+                if (z < _session.PlayerZ - 25f) z += CustomLoop;
+                else if (z > _session.PlayerZ + CustomLoop) z -= CustomLoop * Mathf.Ceil((z - _session.PlayerZ - 25f) / CustomLoop);
+                t.position = new Vector3(t.position.x, t.position.y, z);
+                var lvl = _session.Level;
+                bool hide = Mathf.Abs(t.position.x) < 14f && lvl != null && (lvl.IsWater(z) || lvl.IsWater(z - 3f) || lvl.IsWater(z + 3f));
+                if (t.gameObject.activeSelf == hide) t.gameObject.SetActive(!hide);
+            }
+        }
+
+        /// <summary>Beispiel-Zeichnung zum Ausprobieren.</summary>
+        public void LoadSampleWorld()
+        {
+            var doc = new DrawingDocument();
+            for (int i = 0; i < 6; i++)
+            {
+                float z = 20f + i * 62f, side = i % 2 == 0 ? -1f : 1f;
+                doc.AddStroke(BrushKind.House, new List<Vec2> { new Vec2(side * 14f, z), new Vec2(side * 26f, z + 14f) });
+                doc.AddStroke(BrushKind.House, new List<Vec2> { new Vec2(-side * 16f, z + 30f), new Vec2(-side * 30f, z + 44f) });
+            }
+            doc.AddStroke(BrushKind.Tree, new List<Vec2> { new Vec2(-9f, 5f), new Vec2(-9f, 395f) });
+            doc.AddStroke(BrushKind.Tree, new List<Vec2> { new Vec2(9f, 5f), new Vec2(9f, 395f) });
+            doc.AddStroke(BrushKind.Garden, new List<Vec2> { new Vec2(18f, 150f), new Vec2(34f, 150f), new Vec2(36f, 180f), new Vec2(20f, 186f) });
+            doc.AddStroke(BrushKind.Garden, new List<Vec2> { new Vec2(-20f, 260f), new Vec2(-36f, 262f), new Vec2(-34f, 292f), new Vec2(-18f, 290f) });
+            WorldDoc = doc;
+        }
 
         /// <summary>F12: Store-Screenshot in doppelter Auflösung (Editor: Ordner StoreAssets/Screenshots).</summary>
         private void TakeStoreScreenshot()
@@ -454,6 +602,7 @@ namespace WorldRush.Runtime
             float baseZ = Mathf.Floor((_session.PlayerZ - TileLength) / TileLength) * TileLength;
             for (int i = 0; i < _groundTiles.Count; i++)
                 _groundTiles[i].position = new Vector3(0f, 0f, baseZ + i * TileLength + TileLength * 0.5f);
+            if (CustomWorldActive) { SyncCustomWorld(); return; }
             foreach (var b in _scenery)
             {
                 float z = b.position.z;
@@ -797,6 +946,7 @@ namespace WorldRush.Runtime
         private void BuildKitScenery(float trackWidth, DeterministicRandom rnd)
         {
             var kit = new EnvironmentKit();
+            _kit = kit;
             Debug.Log($"[FersaSurfer] Version {ProductInfo.Version} · Stadt-Modelle: {kit.Buildings.Count} Gebäude, {kit.Props.Count} Deko, {kit.Cars.Count} Autos");
             if (!kit.HasAny) return;
             float half = trackWidth * 0.5f;

@@ -15,7 +15,8 @@ namespace WorldRush.Runtime
         private Texture2D _panelTex, _buttonTex, _barTex, _bannerTex;
         private float _scale = 1f;
         private string _outfitText;
-        private int _tab; // 0 = Start, 1 = Aufgaben, 2 = Shop, 3 = Optionen
+        private int _tab; // 0 = Start, 1 = Aufgaben, 2 = Shop, 3 = Welt, 4 = Optionen
+        private readonly WorldEditorPanel _worldPanel = new WorldEditorPanel();
         private bool _showCredits;
         private bool _settingsDirty;
         private string _shopMessage = "";
@@ -23,7 +24,7 @@ namespace WorldRush.Runtime
         private readonly List<(string text, Color color, float time)> _popups = new List<(string, Color, float)>();
 
         private static readonly PowerUpKind[] Kinds = { PowerUpKind.Board, PowerUpKind.Magnet, PowerUpKind.Shield, PowerUpKind.Double };
-        private static readonly string[] TabKeys = { "tab.start", "tab.missions", "tab.shop", "tab.settings" };
+        private static readonly string[] TabKeys = { "tab.start", "tab.missions", "tab.shop", "tab.world", "tab.settings" };
 
         public void Init(GameRoot root)
         {
@@ -222,7 +223,8 @@ namespace WorldRush.Runtime
             {
                 1 => 400 * k,
                 2 => (160 + BoardShop.Items.Length * 64) * k,
-                3 => (_showCredits ? 460 : 500) * k,
+                3 => Mathf.Min(620 * k, Screen.height - 150 * k),
+                4 => (_showCredits ? 460 : 500) * k,
                 _ => 540 * k
             };
             card.height = panelHeight;
@@ -231,7 +233,8 @@ namespace WorldRush.Runtime
             {
                 case 1: DrawMissions(card, k); break;
                 case 2: DrawShop(card, k); break;
-                case 3: if (_showCredits) DrawCredits(card, k); else DrawSettings(card, k); break;
+                case 3: _worldPanel.Draw(_root, card, k, _big, _mid, _small, _chip, _button, _panel, _barTex); break;
+                case 4: if (_showCredits) DrawCredits(card, k); else DrawSettings(card, k); break;
                 default: DrawStart(card, k); break;
             }
             DrawTabs(card.x, Mathf.Min(Screen.height - 58 * k, card.yMax + 10 * k), card.width, k);
@@ -239,7 +242,7 @@ namespace WorldRush.Runtime
 
         private void DrawTabs(float x, float y, float width, float k)
         {
-            float w = (width - 30 * k) / 4f;
+            float w = (width - 10 * k * (TabKeys.Length - 1)) / TabKeys.Length;
             for (int i = 0; i < TabKeys.Length; i++)
             {
                 var r = new Rect(x + i * (w + 10 * k), y, w, 48 * k);
