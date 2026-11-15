@@ -79,7 +79,11 @@ namespace WorldRush.Runtime
 
             _saveRepo = new LocalSaveRepository(Path.Combine(Application.persistentDataPath, ProductInfo.SaveFileName));
             _save = _saveRepo.Load();
+            // Alter Spielstand (vor Shop/Aufgaben): bisher gesammelte Münzen einmalig aufs Konto buchen
+            if (_save.MissionSet == -1 && _save.Wallet == 0 && _save.OwnedBoards == 0 && _save.TotalCoins > 0)
+                _save.Wallet = _save.TotalCoins;
             _missions = MissionBoard.Load(MissionBoard.SetIdForDate(System.DateTime.UtcNow), _save);
+            _missions.Store(_save);
 
             int startSeed = seed != 0 ? seed : System.Environment.TickCount;
             _levelIndex = Mathf.Clamp(PlayerPrefs.GetInt("fs-level", 0), 0, UnlockedLevels);
@@ -196,8 +200,33 @@ namespace WorldRush.Runtime
 
         // ---------- Ereignisse ----------
 
+        private int _bankedCoins;
+
+        /// <summary>Münzen der laufenden Runde aufs Konto buchen (ohne doppelt zu zählen).</summary>
+        private void BankCoins()
+        {
+            int add = _session.Score.Coins - _bankedCoins;
+            if (add <= 0) return;
+            _save.TotalCoins += add;
+            _save.Wallet += add;
+            _bankedCoins = _session.Score.Coins;
+        }
+
+        /// <summary>Beim Stoppen, Schließen oder Wegwechseln: Münzen sichern.</summary>
+        private void BankAndSave()
+        {
+            if (_session == null || _save == null) return;
+            BankCoins();
+            SaveNow();
+        }
+
+        private void OnApplicationPause(bool paused) { if (paused) BankAndSave(); }
+        private void OnApplicationQuit() => BankAndSave();
+        private void OnDisable() => BankAndSave();
+
         private void OnStateChanged(GameState state)
         {
+            if (state == GameState.Running && _session.Score.Coins == 0) _bankedCoins = 0; // neue Runde
             if (state == GameState.Running && !_music.isPlaying) _music.Play();
             if (state == GameState.Won)
             {
@@ -210,8 +239,7 @@ namespace WorldRush.Runtime
             }
             if (state != GameState.GameOver && state != GameState.Won) return;
             _save.RunsPlayed++;
-            _save.TotalCoins += _session.Score.Coins;
-            _save.Wallet += _session.Score.Coins;
+            BankCoins();
             foreach (var m in _missions.ApplyRun(RunStats.From(_session)))
             {
                 _save.Wallet += m.Reward;
