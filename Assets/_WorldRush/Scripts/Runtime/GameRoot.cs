@@ -603,7 +603,7 @@ namespace WorldRush.Runtime
         private void BuildKitScenery(float trackWidth, DeterministicRandom rnd)
         {
             var kit = new EnvironmentKit();
-            Debug.Log($"[FersaSurfer] Version {ProductInfo.Version}-mat3 · Stadt-Modelle: {kit.Buildings.Count} Gebäude, {kit.Props.Count} Deko, {kit.Cars.Count} Autos");
+            Debug.Log($"[FersaSurfer] Version {ProductInfo.Version} · Stadt-Modelle: {kit.Buildings.Count} Gebäude, {kit.Props.Count} Deko, {kit.Cars.Count} Autos");
             if (!kit.HasAny) return;
             float half = trackWidth * 0.5f;
             _kitBuildings = kit.Buildings.Count > 0;

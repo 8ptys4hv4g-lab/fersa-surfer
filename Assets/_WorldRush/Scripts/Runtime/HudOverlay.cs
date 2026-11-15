@@ -86,7 +86,7 @@ namespace WorldRush.Runtime
                 GUI.color = prev;
             }
 
-            GUI.Label(new Rect(safe.x + pad, Screen.height - 28 * k, 300 * k, 24 * k), "v" + ProductInfo.Version + "-mat3", new GUIStyle(_chip) { alignment = TextAnchor.MiddleLeft });
+            GUI.Label(new Rect(safe.x + pad, Screen.height - 28 * k, 300 * k, 24 * k), "v" + ProductInfo.Version, new GUIStyle(_chip) { alignment = TextAnchor.MiddleLeft });
 
             // Oben rechts: Ton + Pause
             var soundRect = new Rect(safe.xMax - pad - 260 * k, safe.y + pad, 120 * k, 52 * k);

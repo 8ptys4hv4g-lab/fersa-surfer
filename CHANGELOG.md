@@ -3,6 +3,9 @@
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
+
+## [0.3.0] – 2026-11-15
+- Version für Level-System, Surf-Abschnitte, Material-Umwandlung beim Import.
 ### Hinzugefügt
 - Neue Spielidee: Levels mit Ziellinie und bis zu 3 Sternen, Surf-Abschnitte auf Wasser mit Wellen, Salto-Trick in der Luft, Level-Auswahl, Fortschrittsbalken, Sieg-Bildschirm (Kern: 9 neue Tests, 114 gesamt).
 ### Hinzugefügt
