@@ -109,7 +109,7 @@ namespace WorldRush.Runtime
             BuildAtmosphere();
             BuildEnvironment();
             if (MaterialFactory.EmptySlotsFilled > 0)
-                Debug.Log($"[FersaSurfer] {MaterialFactory.EmptySlotsFilled} leere Material-Plätze mit Cartoon-Farben gefüllt.");
+                Debug.Log($"[Fesara] {MaterialFactory.EmptySlotsFilled} leere Material-Plätze mit Cartoon-Farben gefüllt.");
             BuildPlayer();
             BuildCamera();
             BuildParticles();
@@ -302,8 +302,8 @@ namespace WorldRush.Runtime
             }
             CustomWorldActive = true;
             PlayerPrefs.SetInt(CustomWorldKey, 1);
-            if (save) { try { _worlds?.Save(def); } catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] Welt speichern fehlgeschlagen: " + e.Message); } }
-            Debug.Log($"[FersaSurfer] Eigene Welt gebaut: {plan.Objects.Count} Objekte. " + string.Join(" | ", plan.Warnings));
+            if (save) { try { _worlds?.Save(def); } catch (System.Exception e) { Debug.LogWarning("[Fesara] Welt speichern fehlgeschlagen: " + e.Message); } }
+            Debug.Log($"[Fesara] Eigene Welt gebaut: {plan.Objects.Count} Objekte. " + string.Join(" | ", plan.Warnings));
             var notes = new List<string>();
             foreach (var w in plan.Warnings) if (!w.Contains("Straße")) notes.Add(w); // Straßen-Hinweis ist hier normal (Laufstrecke ist fest)
             return notes;
@@ -314,7 +314,7 @@ namespace WorldRush.Runtime
         {
             UseStandardWorld();
             WorldDoc = new DrawingDocument();
-            try { _worlds?.Delete(CustomWorldId); } catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] " + e.Message); }
+            try { _worlds?.Delete(CustomWorldId); } catch (System.Exception e) { Debug.LogWarning("[Fesara] " + e.Message); }
         }
 
         /// <summary>Alles auf Anfang: Spielstand, Sterne, Bretter, Einstellungen, eigene Welt. Lädt die Szene neu.</summary>
@@ -323,7 +323,7 @@ namespace WorldRush.Runtime
             RestoreDefaultCity();
             _resetting = true;
             foreach (var path in new[] { _saveRepo.FilePath, _saveRepo.BackupPath })
-                try { if (File.Exists(path)) File.Delete(path); } catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] " + e.Message); }
+                try { if (File.Exists(path)) File.Delete(path); } catch (System.Exception e) { Debug.LogWarning("[Fesara] " + e.Message); }
             PlayerPrefs.DeleteAll();
             PlayerPrefs.Save();
             UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
@@ -404,7 +404,7 @@ namespace WorldRush.Runtime
             string file = Path.Combine(dir, $"fersa-{System.DateTime.Now:yyyyMMdd-HHmmss}.png");
             ScreenCapture.CaptureScreenshot(file, 2);
             _hud?.Popup("Screenshot!", NeonCyan);
-            Debug.Log("[FersaSurfer] Screenshot gespeichert: " + Path.GetFullPath(file));
+            Debug.Log("[Fesara] Screenshot gespeichert: " + Path.GetFullPath(file));
         }
 
         // ---------- Einstellungen & Tutorial ----------
@@ -525,7 +525,7 @@ namespace WorldRush.Runtime
             _missions.Store(_save);
             _save.HighScore = Mathf.Max(_save.HighScore, _session.Score.HighScore);
             try { _saveRepo.Save(_save); }
-            catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] Speichern fehlgeschlagen: " + e.Message); }
+            catch (System.Exception e) { Debug.LogWarning("[Fesara] Speichern fehlgeschlagen: " + e.Message); }
         }
 
         private void OnCoin(Coin coin, int points)
@@ -969,7 +969,7 @@ namespace WorldRush.Runtime
         {
             var kit = new EnvironmentKit();
             _kit = kit;
-            Debug.Log($"[FersaSurfer] Version {ProductInfo.Version} · Stadt-Modelle: {kit.Buildings.Count} Gebäude, {kit.Props.Count} Deko, {kit.Cars.Count} Autos");
+            Debug.Log($"[Fesara] Version {ProductInfo.Version} · Stadt-Modelle: {kit.Buildings.Count} Gebäude, {kit.Props.Count} Deko, {kit.Cars.Count} Autos");
             if (!kit.HasAny) return;
             float half = trackWidth * 0.5f;
             _kitBuildings = kit.Buildings.Count > 0;
@@ -1220,7 +1220,7 @@ namespace WorldRush.Runtime
         private void SaveNow()
         {
             try { _saveRepo.Save(_save); }
-            catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] Speichern fehlgeschlagen: " + e.Message); }
+            catch (System.Exception e) { Debug.LogWarning("[Fesara] Speichern fehlgeschlagen: " + e.Message); }
         }
 
         private List<GameObject> _models = new List<GameObject>();
@@ -1451,7 +1451,7 @@ namespace WorldRush.Runtime
                 lit.SetFloat("_Cutoff", m.HasProperty("_Cutoff") ? m.GetFloat("_Cutoff") : 0.5f);
             }
             Converted[m] = lit;
-            Debug.Log($"[FersaSurfer] Material umgewandelt: '{m.name}' (Shader '{name}') → URP/Lit, Textur: {(tex != null ? tex.name : "-")}");
+            Debug.Log($"[Fesara] Material umgewandelt: '{m.name}' (Shader '{name}') → URP/Lit, Textur: {(tex != null ? tex.name : "-")}");
             return lit;
         }
 

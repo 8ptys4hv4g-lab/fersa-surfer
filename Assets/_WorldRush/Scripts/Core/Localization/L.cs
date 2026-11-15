@@ -97,8 +97,8 @@ namespace WorldRush.Core
             ["tut.trick"] = ("Wasser! Springen, dann in der Luft nochmal = Salto", "Water! Jump, then jump again mid-air = flip"),
             ["tut.done"] = ("Super! Du kannst alles. Viel Spaß!", "Great! You've got it. Have fun!"),
             ["credits.text"] = (
-                "Fersa Wave\n\nSpiel & Code: Fersa Wave Team\nSpielfiguren & Stadt: Quaternius (CC0) bzw. Unity-Asset-Store-Pakete (Standard Unity Asset Store EULA)\nMusik & Sounds: im Spiel erzeugt\nEngine: Unity\n\nKeine Werbung · keine Tracker · keine Datenübertragung",
-                "Fersa Wave\n\nGame & code: Fersa Wave team\nCharacters & city: Quaternius (CC0) or Unity Asset Store packages (Standard Unity Asset Store EULA)\nMusic & sounds: generated in-game\nEngine: Unity\n\nNo ads · no trackers · no data sharing"),
+                "Fesara – Run & Surf\n\nSpiel & Code: Fesara-Team\nSpielfiguren & Stadt: Quaternius (CC0) bzw. Unity-Asset-Store-Pakete (Standard Unity Asset Store EULA)\nMusik & Sounds: im Spiel erzeugt\nEngine: Unity\n\nKeine Werbung · keine Tracker · keine Datenübertragung",
+                "Fesara – Run & Surf\n\nGame & code: Fesara team\nCharacters & city: Quaternius (CC0) or Unity Asset Store packages (Standard Unity Asset Store EULA)\nMusic & sounds: generated in-game\nEngine: Unity\n\nNo ads · no trackers · no data sharing"),
         };
 
         public static IEnumerable<string> Keys => Texts.Keys;

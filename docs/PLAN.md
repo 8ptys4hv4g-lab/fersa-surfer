@@ -1,4 +1,4 @@
-# Plan – Fersa Wave
+# Plan – Fesara
 
 Die Grundlage ist der Masterplan v1.0 (`archive/2026-11-14_MASTERPLAN_v1.0.md`). Dieser Plan ist die **aktuelle, gepflegte** Fassung.
 
@@ -23,7 +23,7 @@ Die Grundlage ist der Masterplan v1.0 (`archive/2026-11-14_MASTERPLAN_v1.0.md`).
 | M11 | KI und Community (optional) | ⬜ | Kosten, Moderation und Sicherheit nachweisbar | Opus / High |
 
 ## Nächste Schritte
-1. **Du:** Das Projekt einmal in Unity 6 öffnen, „Fersa Wave → 1. Demo-Szene erstellen“ wählen und ▶ drücken. Fehlermeldungen aus der Console an Claude schicken.
+1. **Du:** Das Projekt einmal in Unity 6 öffnen, „Fesara → 1. Demo-Szene erstellen“ wählen und ▶ drücken. Fehlermeldungen aus der Console an Claude schicken.
 2. **Claude:** Gemeldete Fehler beheben. Danach ist M0/M1 ✅.
 3. **Claude:** M3-Schrift vorbereiten: freie Schriftart mit OFL-Lizenz, Vorschlag „Fredoka“ oder „Baloo 2“, als Projektdatei einbinden.
 4. **Claude:** M2 beginnen. Dafür nötig sind eigene 3D-Modelle und eine Figur. Asset-Weg siehe `OPEN_ISSUES.md`.

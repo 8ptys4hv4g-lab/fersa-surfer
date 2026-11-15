@@ -1,6 +1,11 @@
-# Projektstand – Fersa Wave
+# Projektstand – Fesara – Run & Surf
 
 **Stand:** 2026-11-14 · Version 0.2.0 · **M0 + M1 ✅ in Unity bestätigt** · M2/M7 in Arbeit
+
+## Stand 15.11.2026 · Version 0.4.1 · Neuer Name + Logo
+- Name **„Fesara – Run & Surf“**, Logo „Platsch-Welle“ (eigenes Motiv, per Code). Prüfung: `docs/store/RECHTS_UND_SICHERHEITSPRUEFUNG.md`, Abschnitt 3.
+- Getestet: 135 Kern-Tests ✅, Unity-Kompilierprüfung ✅ (nur bekannte, neuere API-Fehler). Icon und Titelbild als Bild erzeugt und angeschaut ✅. **Nicht** in Unity selbst geprüft: Startmenü-Schriftzug, Menü „Fesara → 6.“.
+- Hinweis: Weil sich Firmen-/Produktname in Unity ändern (Menü 2 bzw. 6), kann Unity Test-Münzen/Sterne an einem neuen Ort speichern – sie beginnen dann neu. Im fertigen Spiel betrifft das niemanden.
 
 ## Stand 15.11.2026 · Version 0.4.0 · Store-Vorbereitung
 - **Geprüft:** 132 Kern-Tests bestanden; Unity-Code kompiliert gegen Unity-Referenzen (nur erwartete Meldungen zu neueren APIs).
@@ -31,7 +36,7 @@
 
 ## Stand 0.1.0
 ```text
-FERSA SURFER — STATUS
+FESARA — STATUS
 Stand: M0 + M1 (vorbereitet, Spiellogik getestet)
 
 Fertig umgesetzt:
@@ -42,7 +47,7 @@ Fertig umgesetzt:
 - Steuerung: Wischen (Touch + Maus), Tastatur, Gamepad
 - Spielstand lokal, sicher gespeichert (mit Backup)
 - Unity-Szene aus einfachen 3D-Formen + Kamera + Anzeige (Prototyp)
-- Menü "Fersa Wave" in Unity: Demo-Szene erstellen, sichere Build-Einstellungen
+- Menü "Fesara" in Unity: Demo-Szene erstellen, sichere Build-Einstellungen
 - Doku: README, AGENTS, CLAUDE, PLAN, ARCHITECTURE, SECURITY, CHANGELOG, ADRs, Archiv
 
 Tatsächlich ausgeführt/getestet:
@@ -63,7 +68,7 @@ Nicht ausgeführt / Grund:
 So kann ich es selbst ausprobieren:
 1. Unity Hub → Unity 6 LTS installieren
 2. Add project from disk → diesen Ordner
-3. Menü "Fersa Wave → 1. Demo-Szene erstellen"
+3. Menü "Fesara → 1. Demo-Szene erstellen"
 4. ▶ Play drücken, mit Pfeiltasten oder Maus-Wischen spielen
 
 Offene Fehler oder Kosten:

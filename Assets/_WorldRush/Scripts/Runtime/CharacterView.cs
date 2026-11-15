@@ -103,13 +103,13 @@ namespace WorldRush.Runtime
                 _animator = _animation == null ? _model.GetComponentInChildren<Animator>() : null;
                 if (_animator != null) _animator.applyRootMotion = false; // Bewegung macht die Spiellogik
                 PickClips();
-                Debug.Log($"[FersaSurfer] 3D-Figur geladen: {prefab.name} · Renderer: {_modelRenderers.Length} · " +
+                Debug.Log($"[Fesara] 3D-Figur geladen: {prefab.name} · Renderer: {_modelRenderers.Length} · " +
                           $"Animationen: {(_animation != null ? _animation.GetClipCount() : _states.Count)} {(_animator != null ? "[Animator]" : "[Legacy]")} (Laufen: {_runClip ?? "-"}, Springen: {_jumpClip ?? "-"}, Stehen: {_idleClip ?? "-"})");
             }
             else
             {
                 int found = Resources.LoadAll<Object>("Characters").Length;
-                Debug.LogWarning($"[FersaSurfer] Keine 3D-Figur in Assets/_WorldRush/Resources/Characters gefunden (Dateien dort: {found}). Platzhalter-Figur wird verwendet.");
+                Debug.LogWarning($"[Fesara] Keine 3D-Figur in Assets/_WorldRush/Resources/Characters gefunden (Dateien dort: {found}). Platzhalter-Figur wird verwendet.");
                 BuildPlaceholder();
             }
 
@@ -141,14 +141,14 @@ namespace WorldRush.Runtime
             foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 smr.updateWhenOffscreen = true; // nie fälschlich ausblenden
 
-            if (!TryMeshBounds(go, out var b) || b.size.y < 0.0001f) { Debug.LogWarning("[FersaSurfer] Figur hat keine messbare Größe."); return; }
+            if (!TryMeshBounds(go, out var b) || b.size.y < 0.0001f) { Debug.LogWarning("[Fesara] Figur hat keine messbare Größe."); return; }
             float factor = height / b.size.y;
             if (float.IsNaN(factor) || float.IsInfinity(factor)) return;
             go.transform.localScale *= factor;
             TryMeshBounds(go, out b);
             var anchor = go.transform.parent != null ? go.transform.parent.position : Vector3.zero;
             go.transform.position += new Vector3(anchor.x - b.center.x, anchor.y - b.min.y, anchor.z - b.center.z);
-            Debug.Log($"[FersaSurfer] Figur skaliert mit Faktor {factor:0.###}, Höhe jetzt {b.size.y:0.00} m");
+            Debug.Log($"[Fesara] Figur skaliert mit Faktor {factor:0.###}, Höhe jetzt {b.size.y:0.00} m");
         }
 
         internal static bool TryMeshBounds(GameObject go, out Bounds bounds)

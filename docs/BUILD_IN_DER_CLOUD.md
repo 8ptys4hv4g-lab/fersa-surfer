@@ -25,7 +25,7 @@ Unity verlangt eine (kostenlose) Lizenz. Die muss **einmal** auf deinem PC erzeu
 
 1. Auf GitHub **Actions → „Spiel bauen“ → Run workflow** öffnen und auf **Run workflow** klicken.
 2. Nach etwa 20–60 Minuten liegt das Ergebnis unten beim Lauf unter **Artifacts**.
-3. **Android:** `FersaSurfer-Android` herunterladen und entpacken. Die `.apk` aufs Handy kopieren und installieren. Dafür musst du „Unbekannte Quellen erlauben“ einschalten.
+3. **Android:** `Fesara-Android` herunterladen und entpacken. Die `.apk` aufs Handy kopieren und installieren. Dafür musst du „Unbekannte Quellen erlauben“ einschalten.
 
 ## Kosten
 - Private Repositories haben bei GitHub Free **2.000 Gratis-Minuten pro Monat**.

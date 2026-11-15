@@ -1,4 +1,4 @@
-# Rechts- und Sicherheitsprüfung – Fersa Wave
+# Rechts- und Sicherheitsprüfung – Fesara
 
 **Stand:** 15.11.2026 · **Hinweis:** Das ist eine sorgfältige technische Prüfung, **keine Rechtsberatung**. Vor dem Verkauf/der Veröffentlichung einmal von einer Anwältin/einem Anwalt (IT-/Markenrecht) gegenlesen lassen.
 
@@ -28,8 +28,16 @@
 ## 3. Marken und Ähnlichkeit zu anderen Spielen
 - Spielprinzip „Endless Runner“ ist frei – **keine** fremden Figuren, Logos, Level-Designs, Musik oder UI kopiert. ✅
 - Store-Texte nennen **keine** fremden Spiele. **Nie** mit „wie Subway Surfers“ o. Ä. werben. ✅
-- **Name „Fersa Wave“:** Keine App/kein Spiel mit diesem Namen gefunden. **Aber:** „FERSA“ ist eine eingetragene Marke eines spanischen Kugellager-Herstellers (Klassen 7 und 12 – Maschinen/Fahrzeugteile). Spiele liegen in anderen Klassen (9, 41) → Risiko eher gering, aber **nicht null**.
-  - ➡️ Vor Veröffentlichung: DPMAregister + EUIPO eSearch prüfen, Anwalt kurz fragen, ggf. eigene Marke „Fersa Wave“ in Klassen 9 und 41 anmelden (DPMA ab ca. 290 €). Alternativ einen Namen ohne „Fersa“ wählen.
+- **Name „Fesara – Run & Surf“** (gewählt am 15.11.2026, vorher „Fersa Wave“). Ergebnis der Internetsuche:
+  | Gefunden | Bewertung |
+  |---|---|
+  | Spiel/App „Fesara“ (Google Play, App Store, itch.io, Web) | ✅ nichts gefunden |
+  | Marke „Fesara“ (in Suchergebnissen) | ✅ nichts gefunden – **offizielle Register selbst noch prüfen** |
+  | Online-Shop fesara.com (England, Haushalt/Elektronik), Fesara LLC (New York) | ⚠️ anderer Bereich, geringes Risiko; Domain fesara.com vergeben |
+  | „Run & Surf“ | ✅ beschreibende Wörter, frei nutzbar; geschützt werden kann nur „Fesara“ |
+  | Abstand zu Subway Surfers | ✅ weder „Subway“ noch „Surfers“ im Namen |
+  - Warum nicht mehr „Fersa Wave“: „FERSA“ ist eine eingetragene Marke (Kugellager) und bei Google Play gibt es einen Entwickler „FERSA“. Geprüft und verworfen: „FerSea“ (Ferragamo-Stiefelmodell, Dünger).
+  - ➡️ Vor Veröffentlichung: **tmdn.org/tmview** nach „Fesara“ durchsuchen (deckt DPMA, EUIPO, UK, USA ab), Anwalt kurz fragen, dann eigene Marke „Fesara“ in Klassen 9 und 41 anmelden (DPMA ab ca. 290 €).
 
 ## 4. Datenschutz und Kinderschutz
 | Regel | Status |

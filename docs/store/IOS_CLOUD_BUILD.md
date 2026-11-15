@@ -10,10 +10,10 @@ GitHub baut die App: ein Linux-Server erzeugt mit Unity das Xcode-Projekt, ein M
 developer.apple.com → **Account** → **Enroll** → als Einzelperson mit deiner Apple-ID (Zwei-Faktor-Anmeldung nötig). Die Freischaltung kann 1–2 Tage dauern.
 
 ### 2. App-ID anlegen
-developer.apple.com → **Certificates, Identifiers & Profiles** → **Identifiers** → **+** → *App IDs* → *App* → Beschreibung „Fersa Wave“, Bundle ID **explicit**: `com.fersawave.game` → Registrieren.
+developer.apple.com → **Certificates, Identifiers & Profiles** → **Identifiers** → **+** → *App IDs* → *App* → Beschreibung „Fesara“, Bundle ID **explicit**: `com.fesara.game` → Registrieren.
 
 ### 3. App in App Store Connect anlegen
-appstoreconnect.apple.com → **Apps** → **+** → *Neue App* → Plattform iOS, Name „Fersa Wave“, Sprache Deutsch, Bundle-ID `com.fersawave.game`, SKU z. B. `fersawave01`.
+appstoreconnect.apple.com → **Apps** → **+** → *Neue App* → Plattform iOS, Name „Fesara“, Sprache Deutsch, Bundle-ID `com.fesara.game`, SKU z. B. `fesara01`.
 
 ### 4. API-Schlüssel erzeugen (für den automatischen Upload)
 App Store Connect → **Benutzer und Zugriff** → **Integrationen** → **App Store Connect API** → *Team-Schlüssel* → **+** → Name „GitHub“, Zugriff **Admin** → Erstellen.
@@ -43,7 +43,7 @@ Diese Werte sieht nur GitHub. **Nie in den Chat oder in Dateien schreiben.**
 
 ## Bauen
 GitHub → **Actions** → **„iPhone/iPad bauen → TestFlight“** → **Run workflow**. Dauer ca. 40–70 Minuten.
-Danach in App Store Connect → **TestFlight**: Build erscheint nach der Verarbeitung → dich selbst als Tester hinzufügen → App **TestFlight** auf iPhone/iPad installieren → Fersa Wave testen.
+Danach in App Store Connect → **TestFlight**: Build erscheint nach der Verarbeitung → dich selbst als Tester hinzufügen → App **TestFlight** auf iPhone/iPad installieren → Fesara testen.
 
 ## Kosten bei GitHub
 Private Projekte: macOS-Minuten zählen **10-fach** (2.000 Gratis-Minuten ≈ 200 Mac-Minuten/Monat). Ein Durchlauf braucht ca. 15–25 Mac-Minuten + Linux-Minuten → einige Builds pro Monat sind gratis. Speicher für Zwischendateien wird nach 1 Tag gelöscht.

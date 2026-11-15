@@ -15,7 +15,7 @@ namespace WorldRush.EditorTools
     {
         public static void Build()
         {
-            string path = Arg("-customBuildPath") ?? "Build/FersaWave";
+            string path = Arg("-customBuildPath") ?? "Build/Fesara";
             BuildTarget target = EditorUserBuildSettings.activeBuildTarget;
             var group = BuildPipeline.GetBuildTargetGroup(target);
             var named = NamedBuildTarget.FromBuildTargetGroup(group);
@@ -23,7 +23,7 @@ namespace WorldRush.EditorTools
             FersaSurferSetupMenu.CreateDemoScene();
             PlayerSettings.productName = ProductInfo.DisplayName;
             PlayerSettings.bundleVersion = ProductInfo.Version;
-            PlayerSettings.companyName = "FersaWave";
+            PlayerSettings.companyName = "Fesara";
 
             // Linux-Build-Server können Windows nur mit Mono bauen; Android/WebGL nutzen IL2CPP.
             var backend = target == BuildTarget.StandaloneWindows64 || target == BuildTarget.StandaloneLinux64
@@ -33,7 +33,7 @@ namespace WorldRush.EditorTools
 
             if (target == BuildTarget.Android)
             {
-                PlayerSettings.SetApplicationIdentifier(named, "com.fersawave.game");
+                PlayerSettings.SetApplicationIdentifier(named, StoreBuild.PackageId);
                 PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
                 PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
                 EditorUserBuildSettings.buildAppBundle = false; // APK zum direkten Installieren
@@ -42,7 +42,7 @@ namespace WorldRush.EditorTools
             else if (target == BuildTarget.iOS)
             {
                 // iPhone/iPad: Unity erzeugt ein Xcode-Projekt; signiert und hochgeladen wird auf dem Mac-Server (siehe .github/workflows/ios.yml).
-                PlayerSettings.SetApplicationIdentifier(named, "com.fersawave.game");
+                PlayerSettings.SetApplicationIdentifier(named, StoreBuild.PackageId);
                 PlayerSettings.iOS.targetOSVersionString = "15.0";
                 PlayerSettings.iOS.appleEnableAutomaticSigning = true;
                 string team = Environment.GetEnvironmentVariable("APPLE_TEAM_ID");
@@ -57,7 +57,7 @@ namespace WorldRush.EditorTools
             }
             else if (target == BuildTarget.StandaloneWindows64 && !path.EndsWith(".exe"))
             {
-                path += "/FersaWave.exe";
+                path += "/Fesara.exe";
             }
 
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
@@ -68,7 +68,7 @@ namespace WorldRush.EditorTools
                 options = BuildOptions.None
             });
 
-            Debug.Log($"[FersaSurfer] Build {target}: {report.summary.result}, {report.summary.totalSize / (1024 * 1024)} MB, {report.summary.totalErrors} Fehler");
+            Debug.Log($"[Fesara] Build {target}: {report.summary.result}, {report.summary.totalSize / (1024 * 1024)} MB, {report.summary.totalErrors} Fehler");
             if (Application.isBatchMode) EditorApplication.Exit(report.summary.result == BuildResult.Succeeded ? 0 : 1);
         }
 

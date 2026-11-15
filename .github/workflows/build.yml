@@ -35,9 +35,9 @@ jobs:
           unityVersion: ${{ inputs.unityVersion }}
           targetPlatform: ${{ matrix.target }}
           buildMethod: WorldRush.EditorTools.CiBuild.Build
-          buildName: FersaSurfer
+          buildName: Fesara
       - uses: actions/upload-artifact@v4
         with:
-          name: FersaSurfer-${{ matrix.target }}
+          name: Fesara-${{ matrix.target }}
           path: build/${{ matrix.target }}
           retention-days: 14

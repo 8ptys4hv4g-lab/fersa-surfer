@@ -14,9 +14,9 @@ namespace WorldRush.EditorTools
     {
         private const string IconPath = "Assets/_WorldRush/Art/AppIcon.png";
         private const string StoreFolder = "StoreAssets";
-        public const string PackageId = "com.fersawave.game";
+        public const string PackageId = "com.fesara.game";
 
-        [MenuItem("Fersa Wave/6. Store-Einstellungen + App-Icon (Android)", priority = 20)]
+        [MenuItem("Fesara/6. Store-Einstellungen + App-Icon (Android)", priority = 20)]
         public static void PrepareStore()
         {
             // 1) Icon + Store-Grafiken
@@ -36,7 +36,7 @@ namespace WorldRush.EditorTools
             var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
 
             // 2) Allgemeine Angaben
-            PlayerSettings.companyName = "FersaWave";
+            PlayerSettings.companyName = "Fesara";
             PlayerSettings.productName = ProductInfo.DisplayName;
             PlayerSettings.bundleVersion = ProductInfo.Version;
             if (icon != null) PlayerSettings.SetIcons(NamedBuildTarget.Unknown, new[] { icon }, IconKind.Any);
@@ -65,22 +65,22 @@ namespace WorldRush.EditorTools
 
             string msg = $"Fertig:\n• App-Icon erstellt ({IconPath})\n• Store-Grafiken im Ordner '{StoreFolder}' (Icon 512, Titelbild 1024×500)\n" +
                          $"• Paketname {PackageId}, Version {ProductInfo.Version} (Code {VersionCode(ProductInfo.Version)})\n• Querformat, IL2CPP, ARM64, App Bundle (.aab)\n\n" +
-                         "Nächster Schritt: Menü 'Fersa Wave → 7. Android-AAB bauen'.";
-            Debug.Log("[FersaSurfer] " + msg.Replace("\n", " | "));
-            EditorUtility.DisplayDialog("Fersa Wave – Store", msg, "OK");
+                         "Nächster Schritt: Menü 'Fesara → 7. Android-AAB bauen'.";
+            Debug.Log("[Fesara] " + msg.Replace("\n", " | "));
+            EditorUtility.DisplayDialog("Fesara – Store", msg, "OK");
         }
 
-        [MenuItem("Fersa Wave/7. Android-AAB bauen", priority = 21)]
+        [MenuItem("Fesara/7. Android-AAB bauen", priority = 21)]
         public static void BuildAab()
         {
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
             {
-                EditorUtility.DisplayDialog("Fersa Wave", "Bitte zuerst auf Android umstellen:\nFile → Build Profiles → Android → 'Switch Platform'.\n\n(Falls Android fehlt: im Unity Hub bei Unity 6.6 das Modul 'Android Build Support' hinzufügen.)", "OK");
+                EditorUtility.DisplayDialog("Fesara", "Bitte zuerst auf Android umstellen:\nFile → Build Profiles → Android → 'Switch Platform'.\n\n(Falls Android fehlt: im Unity Hub bei Unity 6.6 das Modul 'Android Build Support' hinzufügen.)", "OK");
                 return;
             }
             if (!PlayerSettings.Android.useCustomKeystore || string.IsNullOrEmpty(PlayerSettings.Android.keystoreName) || !File.Exists(PlayerSettings.Android.keystoreName))
             {
-                EditorUtility.DisplayDialog("Fersa Wave – Signatur fehlt",
+                EditorUtility.DisplayDialog("Fesara – Signatur fehlt",
                     "Google Play braucht einen eigenen Signatur-Schlüssel (Keystore):\n\n" +
                     "Edit → Project Settings → Player → Android → Publishing Settings → 'Keystore Manager' → neuen Keystore anlegen, Passwort merken, 'Add key'.\n\n" +
                     "WICHTIG: Keystore-Datei + Passwort sicher aufbewahren (z. B. USB-Stick + Passwort-Manager) und NIE auf GitHub hochladen. Ohne ihn kannst du keine Updates mehr veröffentlichen.", "OK");
@@ -92,18 +92,18 @@ namespace WorldRush.EditorTools
 
             EditorUserBuildSettings.buildAppBundle = true;
             Directory.CreateDirectory("Builds/Android");
-            string path = $"Builds/Android/FersaSurfer-{ProductInfo.Version}.aab";
+            string path = $"Builds/Android/Fesara-{ProductInfo.Version}.aab";
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = scenes.ToArray(), locationPathName = path, target = BuildTarget.Android, options = BuildOptions.None });
             bool ok = report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded;
             string text = ok
                 ? $"Gebaut: {path}\nGröße: {report.summary.totalSize / (1024 * 1024)} MB\n\nDiese Datei lädst du in der Google Play Console hoch (Test → Geschlossener Test)."
                 : $"Build fehlgeschlagen ({report.summary.totalErrors} Fehler). Details in der Console.";
-            Debug.Log("[FersaSurfer] " + text.Replace("\n", " | "));
-            EditorUtility.DisplayDialog("Fersa Wave – Android", text, "OK");
+            Debug.Log("[Fesara] " + text.Replace("\n", " | "));
+            EditorUtility.DisplayDialog("Fesara – Android", text, "OK");
             if (ok) EditorUtility.RevealInFinder(path);
         }
 
-        [MenuItem("Fersa Wave/8. Web-Version bauen (für iPad/iPhone im Browser)", priority = 22)]
+        [MenuItem("Fesara/8. Web-Version bauen (für iPad/iPhone im Browser)", priority = 22)]
         public static void BuildWeb()
         {
             var scenes = new System.Collections.Generic.List<string>();
@@ -122,7 +122,7 @@ namespace WorldRush.EditorTools
             Directory.CreateDirectory(dir);
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = scenes.ToArray(), locationPathName = dir, target = BuildTarget.WebGL, options = BuildOptions.None });
             bool ok = report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded;
-            string zip = $"Builds/FersaWave-Web-{ProductInfo.Version}.zip";
+            string zip = $"Builds/Fesara-Web-{ProductInfo.Version}.zip";
             if (ok)
             {
                 if (File.Exists(zip)) File.Delete(zip);
@@ -131,8 +131,8 @@ namespace WorldRush.EditorTools
             string text = ok
                 ? $"Fertig: {zip}\n\nAuf itch.io hochladen:\n1. itch.io → 'Upload new project'\n2. Kind of project: HTML\n3. ZIP hochladen, 'This file will be played in the browser' anhaken\n4. Sichtbarkeit: 'Draft' oder 'Restricted' (mit Passwort)\n5. Link auf iPad/iPhone in Safari öffnen."
                 : $"Build fehlgeschlagen ({report.summary.totalErrors} Fehler). Falls 'Web' fehlt: Unity Hub → Installationen → Unity 6.6 → Module hinzufügen → 'Web Build Support'.";
-            Debug.Log("[FersaWave] " + text.Replace("\n", " | "));
-            EditorUtility.DisplayDialog("Fersa Wave – Web", text, "OK");
+            Debug.Log("[Fesara] " + text.Replace("\n", " | "));
+            EditorUtility.DisplayDialog("Fesara – Web", text, "OK");
             if (ok) EditorUtility.RevealInFinder(zip);
         }
 
@@ -144,66 +144,26 @@ namespace WorldRush.EditorTools
             return System.Math.Max(1, Get(0) * 10000 + Get(1) * 100 + Get(2));
         }
 
-        // ---------- Eigenes Motiv: Abendhimmel, Retro-Sonne, Welle, Surfbrett ----------
+        // ---------- Eigenes Motiv: Fesara-Logo "Platsch-Welle" (gezeichnet in Core/Branding/IconPainter) ----------
 
         private static Texture2D Paint(int w, int h, bool square)
         {
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            var px = new Color[w * h];
-            Color top = Hex("#1d0b4a"), mid = Hex("#7a2fb0"), bottom = Hex("#ff6fa8");
-            Color sun = Hex("#ffd23f"), sunLow = Hex("#ff8a3d"), wave = Hex("#2fd7ff"), waveDark = Hex("#1677d6"), foam = Hex("#f2fdff");
-            Color board = Hex("#ffe066"), stripe = Hex("#ff4fa3");
-            float sunX = square ? 0.5f : 0.68f, sunY = 0.6f, sunR = square ? 0.27f : 0.3f * h / w;
-
+            byte[] rgba = WorldRush.Core.Branding.IconPainter.Paint(w, h, square);
+            var px = new Color32[w * h];
             for (int y = 0; y < h; y++)
             {
-                float v = y / (float)(h - 1);
-                Color sky = v > 0.5f ? Color.Lerp(mid, top, (v - 0.5f) * 2f) : Color.Lerp(bottom, mid, v * 2f);
+                int src = (h - 1 - y) * w; // Unity-Texturen beginnen unten, das Bild oben
                 for (int x = 0; x < w; x++)
                 {
-                    float u = x / (float)(w - 1);
-                    Color c = sky;
-
-                    // Retro-Sonne mit Streifen im unteren Teil
-                    float du = (u - sunX) * w / h, dv = v - sunY;
-                    float d = Mathf.Sqrt(du * du + dv * dv);
-                    if (d < sunR)
-                    {
-                        bool gap = dv < 0f && Mathf.Repeat((sunY - v) * 28f, 1f) < 0.32f + (-dv / sunR) * 0.35f;
-                        if (!gap) c = Color.Lerp(sunLow, sun, Mathf.Clamp01((dv / sunR + 1f) * 0.5f));
-                    }
-                    else if (d < sunR * 1.25f) c = Color.Lerp(c, sun, (1f - (d - sunR) / (sunR * 0.25f)) * 0.25f);
-
-                    // Welle (zwei Ebenen) mit Schaumkante
-                    float crest = 0.36f + 0.07f * Mathf.Sin(u * Mathf.PI * 2.2f + 0.6f) + 0.03f * Mathf.Sin(u * Mathf.PI * 7f);
-                    if (v < crest)
-                    {
-                        c = Color.Lerp(waveDark, wave, Mathf.Clamp01(v / crest));
-                        if (crest - v < 0.022f) c = foam;
-                        float back = 0.2f + 0.05f * Mathf.Sin(u * Mathf.PI * 3.1f + 2f);
-                        if (v < back) c = Color.Lerp(waveDark * 0.8f, waveDark, v / back);
-                    }
-
-                    // Surfbrett: gekippte Ellipse auf der Welle
-                    float bx = square ? 0.5f : 0.42f, by = 0.4f;
-                    float rx = (u - bx) * w / h, ry = v - by;
-                    float ang = 0.35f, cs = Mathf.Cos(ang), sn = Mathf.Sin(ang);
-                    float ex = rx * cs + ry * sn, ey = -rx * sn + ry * cs;
-                    float e = (ex * ex) / (0.24f * 0.24f) + (ey * ey) / (0.05f * 0.05f);
-                    if (e < 1f)
-                    {
-                        c = board;
-                        if (Mathf.Abs(ey) < 0.009f) c = stripe;
-                        if (e > 0.82f) c = Color.Lerp(board, Hex("#c98a00"), 0.6f);
-                    }
-                    px[y * w + x] = c;
+                    int o = (src + x) * 4;
+                    px[y * w + x] = new Color32(rgba[o], rgba[o + 1], rgba[o + 2], rgba[o + 3]);
                 }
             }
-            tex.SetPixels(px);
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.SetPixels32(px);
             tex.Apply();
             return tex;
         }
 
-        private static Color Hex(string hex) => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.magenta;
     }
 }

@@ -260,9 +260,16 @@ namespace WorldRush.Runtime
         private void DrawStart(Rect card, float k)
         {
             GUI.Box(card, GUIContent.none, _panel);
-            var titleStyle = new GUIStyle(_big);
-            titleStyle.normal.textColor = GameRoot.NeonCyan;
-            GUI.Label(new Rect(card.x, card.y + 16 * k, card.width, 70 * k), ProductInfo.DisplayName, titleStyle);
+            // Logo-Schriftzug wie im App-Icon: "Fe" lila, "sara" pink, darunter "RUN & SURF" in Türkis.
+            var titleStyle = new GUIStyle(_big) { richText = true };
+            titleStyle.normal.textColor = Color.white;
+            GUI.Label(new Rect(card.x, card.y + 10 * k, card.width, 64 * k), "<color=#c4b3ff>Fe</color><color=#ff86c0>sara</color>", titleStyle);
+            if (!_root.CustomWorldActive)
+            {
+                var tagStyle = new GUIStyle(_chip) { fontSize = (int)(16 * k) };
+                tagStyle.normal.textColor = new Color(0.34f, 0.89f, 0.96f);
+                GUI.Label(new Rect(card.x, card.y + 66 * k, card.width, 24 * k), ProductInfo.Tagline.ToUpperInvariant().Replace(" ", "  "), tagStyle);
+            }
             GUI.Label(new Rect(card.x + 20 * k, card.y + 90 * k, card.width - 40 * k, 60 * k),
                 string.IsNullOrEmpty(_root.LastRunText) ? L.T("menu.controls") : _root.LastRunText, _mid);
             if (_root.CustomWorldActive)

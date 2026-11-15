@@ -6,8 +6,12 @@ namespace WorldRush.Core
     /// </summary>
     public static class ProductInfo
     {
-        public const string DisplayName = "Fersa Wave";
-        public const string Version = "0.4.0";
+        public const string DisplayName = "Fesara";
+        /// <summary>Untertitel unter dem Logo und im Store-Namen ("Fesara – Run & Surf").</summary>
+        public const string Tagline = "Run & Surf";
+        public const string StoreTitle = DisplayName + " \u2013 " + Tagline;
+        public const string Version = "0.4.1";
+        // Bleibt absichtlich gleich, damit vorhandene Spielstände erhalten bleiben.
         public const string SaveFileName = "fersasurfer-save.json";
     }
 }

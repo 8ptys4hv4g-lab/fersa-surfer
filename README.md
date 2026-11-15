@@ -1,4 +1,4 @@
-# Fersa Wave
+# Fesara
 
 Ein 3D-Endless-Runner mit eigenen Welten und Outfits.
 Der interne Code-Name ist **WorldRush**, so heißen auch die Ordner und Namespaces.
@@ -10,7 +10,7 @@ Der interne Code-Name ist **WorldRush**, so heißen auch die Ordner und Namespac
 1. **Unity Hub** installieren und darüber **Unity 6 LTS (6000.0.x)** mit den Modulen *Windows/Mac Build Support (IL2CPP)* und *Android Build Support* installieren.
 2. Im Unity Hub auf **Add → Add project from disk** klicken und diesen Ordner wählen.
 3. Beim ersten Öffnen lädt Unity die Pakete. Das dauert ein paar Minuten.
-4. Im Menü oben **Fersa Wave → 1. Demo-Szene erstellen** wählen.
+4. Im Menü oben **Fesara → 1. Demo-Szene erstellen** wählen.
 5. Oben auf **▶ Play** drücken.
 
 **Steuerung:**
@@ -30,7 +30,7 @@ Siehe [`docs/BUILD_IN_DER_CLOUD.md`](docs/BUILD_IN_DER_CLOUD.md). GitHub baut do
 ## Android-Testbuild
 
 1. **File → Build Profiles → Android → Switch Platform** wählen.
-2. **Fersa Wave → 2. Sichere Build-Einstellungen setzen** wählen.
+2. **Fesara → 2. Sichere Build-Einstellungen setzen** wählen.
 3. Am Handy den Entwicklermodus und USB-Debugging einschalten und das Handy per USB anschließen.
 4. **Build And Run** klicken.
 

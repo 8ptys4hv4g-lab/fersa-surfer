@@ -9,7 +9,7 @@ using WorldRush.Runtime;
 namespace WorldRush.EditorTools
 {
     /// <summary>
-    /// Menü "Fersa Wave → Demo-Szene erstellen": Unity selbst erzeugt Szene und Materialien
+    /// Menü "Fesara → Demo-Szene erstellen": Unity selbst erzeugt Szene und Materialien
     /// (keine handgeschriebenen .unity/.mat-Dateien), trägt die Szene in die Build-Liste ein
     /// und setzt Produktname und sichere Build-Einstellungen.
     /// </summary>
@@ -19,7 +19,7 @@ namespace WorldRush.EditorTools
         private const string ScenePath = Root + "/Scenes/RunnerDemo.unity";
         private const string MaterialDir = Root + "/Art/Materials";
 
-        [MenuItem("Fersa Wave/1. Demo-Szene erstellen", priority = 1)]
+        [MenuItem("Fesara/1. Demo-Szene erstellen", priority = 1)]
         public static void CreateDemoScene()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
@@ -42,10 +42,10 @@ namespace WorldRush.EditorTools
             AddSceneToBuild(ScenePath);
             ApplyPlayerSettings();
             AssetDatabase.SaveAssets();
-            Debug.Log($"[FersaSurfer] Szene erstellt: {ScenePath}. Jetzt oben auf ▶ (Play) drücken.");
+            Debug.Log($"[Fesara] Szene erstellt: {ScenePath}. Jetzt oben auf ▶ (Play) drücken.");
         }
 
-        [MenuItem("Fersa Wave/2. Sichere Build-Einstellungen setzen", priority = 2)]
+        [MenuItem("Fesara/2. Sichere Build-Einstellungen setzen", priority = 2)]
         public static void ApplyPlayerSettings()
         {
             PlayerSettings.productName = ProductInfo.DisplayName;
@@ -60,10 +60,10 @@ namespace WorldRush.EditorTools
             }
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.insecureHttpOption = InsecureHttpOption.NotAllowed;
-            Debug.Log("[FersaSurfer] Build-Einstellungen gesetzt: IL2CPP, Code-Stripping, nur HTTPS, Android ARM64.");
+            Debug.Log("[Fesara] Build-Einstellungen gesetzt: IL2CPP, Code-Stripping, nur HTTPS, Android ARM64.");
         }
 
-        [MenuItem("Fersa Wave/3. 3D-Figuren neu importieren", priority = 3)]
+        [MenuItem("Fesara/3. 3D-Figuren neu importieren", priority = 3)]
         public static void ReimportCharacters()
         {
             int n = 0;
@@ -72,13 +72,13 @@ namespace WorldRush.EditorTools
                 AssetDatabase.ImportAsset(AssetDatabase.GUIDToAssetPath(guid), ImportAssetOptions.ForceUpdate);
                 n++;
             }
-            Debug.Log($"[FersaSurfer] {n} Figur(en) neu importiert (Animationen als Legacy). Jetzt ▶ drücken.");
+            Debug.Log($"[Fesara] {n} Figur(en) neu importiert (Animationen als Legacy). Jetzt ▶ drücken.");
         }
 
-        [MenuItem("Fersa Wave/4. Figuren übernehmen (HAON & Co.)", priority = 4)]
+        [MenuItem("Fesara/4. Figuren übernehmen (HAON & Co.)", priority = 4)]
         public static void UseCharacters()
         {
-            if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog("Fersa Wave", "Bitte zuerst das Spiel stoppen (■).", "OK"); return; }
+            if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog("Fesara", "Bitte zuerst das Spiel stoppen (■).", "OK"); return; }
 
             // 1) Ausgewählte Figur/Ordner, sonst 2) automatisch alle Figuren-Prefabs aus Paketen mit "haon"/"character"/"chara" im Pfad
             var candidates = new List<string>();
@@ -120,7 +120,7 @@ namespace WorldRush.EditorTools
             AssetDatabase.Refresh();
             if (n == 0)
             {
-                EditorUtility.DisplayDialog("Fersa Wave", "Keine Figuren gefunden. Bitte zuerst 'HAON SD series Free bundle' über Window → Package Manager → My Assets importieren.", "OK");
+                EditorUtility.DisplayDialog("Fesara", "Keine Figuren gefunden. Bitte zuerst 'HAON SD series Free bundle' über Window → Package Manager → My Assets importieren.", "OK");
                 return;
             }
             UnityEngine.PlayerPrefs.SetString("fs-character", first);
@@ -136,8 +136,8 @@ namespace WorldRush.EditorTools
                         if (clip != null && (clip.name.ToLowerInvariant().Contains("run") || clip.name.ToLowerInvariant().Contains("walk"))) { withRun++; break; }
             }
             string report = $"{n} Figur(en) übernommen.\n{converted} Material(ien) für URP umgewandelt.\nMit Lauf-Animation: {withRun}.\nShader: {Top(charStats)}\n\nIm Startmenü mit < > auswählen, dann ▶.";
-            Debug.Log("[FersaSurfer] " + report.Replace("\n", " | "));
-            EditorUtility.DisplayDialog("Fersa Wave", report, "OK");
+            Debug.Log("[Fesara] " + report.Replace("\n", " | "));
+            EditorUtility.DisplayDialog("Fesara", report, "OK");
         }
 
         private static readonly string[] PartWords = { "acc", "hair", "face", "prop", "guide", "preview", "dummy", "weapon", "blendshape" };
@@ -145,19 +145,19 @@ namespace WorldRush.EditorTools
         private static readonly string[] CarWords = { "car", "taxi", "bus", "truck", "van", "police", "ambulance", "vehicle", "suv", "pickup", "firetruck" };
         private static readonly string[] SkipWords = { "road", "street", "crossing", "sidewalk", "terrain", "ground", "tile", "floor", "plane", "base", "demo", "scene", "camera", "light probe" };
 
-        [MenuItem("Fersa Wave/5. Ausgewählten Stadt-Ordner verwenden", priority = 5)]
+        [MenuItem("Fesara/5. Ausgewählten Stadt-Ordner verwenden", priority = 5)]
         public static void UseSelectedCityFolder()
         {
-            if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog("Fersa Wave", "Bitte zuerst das Spiel stoppen (■).", "OK"); return; }
+            if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog("Fesara", "Bitte zuerst das Spiel stoppen (■).", "OK"); return; }
             string folder = Selection.activeObject != null ? AssetDatabase.GetAssetPath(Selection.activeObject) : null;
             if (!string.IsNullOrEmpty(folder) && !AssetDatabase.IsValidFolder(folder)) folder = System.IO.Path.GetDirectoryName(folder)?.Replace('\\', '/');
             if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder) || folder.StartsWith(Root)) folder = FindCityFolder();
             if (folder == null)
             {
-                EditorUtility.DisplayDialog("Fersa Wave", "Kein Stadt-Paket gefunden. Bitte zuerst 'Cartoon City' über Window → Package Manager → My Assets importieren.", "OK");
+                EditorUtility.DisplayDialog("Fesara", "Kein Stadt-Paket gefunden. Bitte zuerst 'Cartoon City' über Window → Package Manager → My Assets importieren.", "OK");
                 return;
             }
-            Debug.Log("[FersaSurfer] Verwende Stadt-Ordner: " + folder);
+            Debug.Log("[Fesara] Verwende Stadt-Ordner: " + folder);
             var guids = AssetDatabase.FindAssets("t:Prefab", new[] { folder });
             if (guids.Length == 0) guids = AssetDatabase.FindAssets("t:Model", new[] { folder });
 
@@ -184,12 +184,12 @@ namespace WorldRush.EditorTools
                 if (sub == "Cars") c++; else if (sub == "Buildings") b++; else p++;
             }
             AssetDatabase.Refresh();
-            Debug.Log($"[FersaSurfer] Stadt übernommen: {b} Gebäude, {c} Autos, {p} Deko ({skipped} Straßen-/Bodenteile übersprungen). ▶ drücken.");
+            Debug.Log($"[Fesara] Stadt übernommen: {b} Gebäude, {c} Autos, {p} Deko ({skipped} Straßen-/Bodenteile übersprungen). ▶ drücken.");
             var cityStats = new Dictionary<string, int>();
             int cityConverted = ConvertMaterials(copiedCity, env + "/Materials", cityStats);
             string cityReport = $"Übernommen: {b} Gebäude, {c} Autos, {p} Deko.\n{cityConverted} Material(ien) für URP umgewandelt.\nShader: {Top(cityStats)}\n\nJetzt ▶ drücken.";
-            Debug.Log("[FersaSurfer] " + cityReport.Replace("\n", " | "));
-            EditorUtility.DisplayDialog("Fersa Wave", cityReport, "OK");
+            Debug.Log("[Fesara] " + cityReport.Replace("\n", " | "));
+            EditorUtility.DisplayDialog("Fesara", cityReport, "OK");
         }
 
 /// <summary>Sucht den Ordner eines importierten Stadt-Pakets (Name enthält "city"/"town"), bevorzugt dessen Prefabs-Ordner.</summary>

@@ -1,8 +1,17 @@
-# Changelog – Fersa Surfer
+# Changelog – Fesara – Run & Surf
 
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
-## [Unveröffentlicht]
+## [0.4.1] – 2026-11-15
+### Geändert
+- **Neuer Name: „Fesara – Run & Surf“** (vorher „Fersa Wave“; Grund: „FERSA“ ist eine fremde Marke). Name unter dem Icon: „Fesara“, Untertitel englisch „Run & Surf“.
+- **Neues Logo „Platsch-Welle“** als App-Icon und Store-Titelbild: per Code gezeichnet (`Core/Branding/IconPainter.cs`), eigenes Motiv. Unity-Menü „Fesara → 6.“ erzeugt die Dateien.
+- Startmenü zeigt den Schriftzug „Fe“ (lila) + „sara“ (pink) und „RUN & SURF“.
+- Paketname `com.fesara.game`, Firmenname „Fesara“, Unity-Menü heißt „Fesara“. Speicherdatei unverändert.
+### Hinzugefügt
+- 3 Tests für Name und Logo (Icon undurchsichtig, Farben an den richtigen Stellen, Store-Größen).
+
+## [Unveröffentlicht – ältere Einträge]
 ### Geändert
 - **Neuer Name: „Fersa Wave“** (vorher „Fersa Surfer“) – eigenständiger, Abstand zu bekannten Marken. Paketname `com.fersawave.game`, Menü in Unity heißt jetzt „Fersa Wave“. Spielstand bleibt erhalten (Speicherdatei unverändert).
 ### Geändert

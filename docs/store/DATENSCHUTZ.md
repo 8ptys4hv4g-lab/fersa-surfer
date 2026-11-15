@@ -1,11 +1,11 @@
-# Datenschutzerklärung – Fersa Wave
+# Datenschutzerklärung – Fesara
 
 **Stand:** 15.11.2026
 
-Fersa Wave ist ein Spiel für Kinder und Familien. Wir nehmen Datenschutz ernst und halten es einfach:
+Fesara ist ein Spiel für Kinder und Familien. Wir nehmen Datenschutz ernst und halten es einfach:
 
 ## Kurz gesagt
-**Fersa Wave erhebt, speichert und überträgt keine personenbezogenen Daten.**
+**Fesara erhebt, speichert und überträgt keine personenbezogenen Daten.**
 
 ## Im Einzelnen
 - **Keine Konten, keine Anmeldung.** Das Spiel funktioniert ohne Benutzerkonto.

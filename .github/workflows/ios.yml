@@ -36,11 +36,11 @@ jobs:
           unityVersion: ${{ inputs.unityVersion }}
           targetPlatform: iOS
           buildMethod: WorldRush.EditorTools.CiBuild.Build
-          buildName: FersaWave
+          buildName: Fesara
           customParameters: -BUILD_NUMBER ${{ github.run_number }}
       - uses: actions/upload-artifact@v4
         with:
-          name: FersaWave-Xcode
+          name: Fesara-Xcode
           path: build/iOS
           retention-days: 1
 
@@ -56,7 +56,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: FersaWave-Xcode
+          name: Fesara-Xcode
           path: ios
       - name: App-Store-Connect-Schlüssel bereitstellen
         run: |
@@ -67,7 +67,7 @@ jobs:
           PROJ=$(find ios -name "Unity-iPhone.xcodeproj" -maxdepth 4 | head -1)
           echo "Projekt: $PROJ"
           xcodebuild -project "$PROJ" -scheme Unity-iPhone -configuration Release \
-            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/FersaWave.xcarchive" archive \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Fesara.xcarchive" archive \
             DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
@@ -85,7 +85,7 @@ jobs:
             <key>uploadSymbols</key><true/>
           </dict></plist>
           PLIST
-          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/FersaWave.xcarchive" \
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Fesara.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \

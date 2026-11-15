@@ -1,8 +1,8 @@
-# Privacy Policy – Fersa Wave
+# Privacy Policy – Fesara
 
 **Last updated:** 15 November 2026
 
-**Fersa Wave does not collect, store or share any personal data.**
+**Fesara does not collect, store or share any personal data.**
 
 - No accounts or sign-in.
 - No internet connection: the game sends no data to us or to third parties.
