@@ -8,6 +8,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen na
 - **Neues Logo „Platsch-Welle“** als App-Icon und Store-Titelbild: per Code gezeichnet (`Core/Branding/IconPainter.cs`), eigenes Motiv. Unity-Menü „Fesara → 6.“ erzeugt die Dateien.
 - Startmenü zeigt den Schriftzug „Fe“ (lila) + „sara“ (pink) und „RUN & SURF“.
 - Paketname `com.fesara.game`, Firmenname „Fesara“, Unity-Menü heißt „Fesara“. Speicherdatei unverändert.
+### Behoben
+- Startmenü: Figur stand hinter der Menü-Karte (Kamera war spiegelverkehrt) – jetzt rechts daneben sichtbar.
+- Punkteanzeige überdeckt im Menü nicht mehr die Karte; Versionsnummer unten rechts.
 ### Hinzugefügt
 - 3 Tests für Name und Logo (Icon undurchsichtig, Farben an den richtigen Stellen, Store-Größen).
 

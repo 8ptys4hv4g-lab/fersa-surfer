@@ -201,7 +201,7 @@ namespace WorldRush.Runtime
             var motor = _session.Motor;
             bool menu = _session.State == GameState.Ready;
             Vector3 target = menu
-                ? new Vector3(-1.2f, 2.2f, _session.PlayerZ + 5.2f)
+                ? new Vector3(1.3f, 2.2f, _session.PlayerZ + 5.2f) // Kamera vor der Figur, leicht rechts: Figur erscheint rechts neben dem Menü
                 : new Vector3(motor.LateralX * 0.6f, 3.6f + motor.FeetY * 0.35f, _session.PlayerZ - 6.6f);
             var cam = _camera.transform;
             cam.position = Vector3.Lerp(cam.position, target, 1f - Mathf.Exp(-(menu ? 3f : 9f) * Time.deltaTime));
@@ -211,7 +211,7 @@ namespace WorldRush.Runtime
                 cam.position += Random.insideUnitSphere * _shake * 0.6f;
             }
             Vector3 look = menu
-                ? new Vector3(-2.1f, 1.3f, _session.PlayerZ)
+                ? new Vector3(2.2f, 1.3f, _session.PlayerZ)
                 : new Vector3(motor.LateralX * 0.4f, 1.1f, _session.PlayerZ + 8f);
             cam.rotation = Quaternion.Slerp(cam.rotation, Quaternion.LookRotation(look - cam.position), 1f - Mathf.Exp(-10f * Time.deltaTime));
             float speedT = Mathf.InverseLerp(_session.Config.StartSpeed, _session.Config.MaxSpeed, _session.Speed);

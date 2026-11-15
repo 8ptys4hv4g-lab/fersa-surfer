@@ -86,8 +86,8 @@ namespace WorldRush.Runtime
             safe.y = Screen.height - safe.yMax;
             float pad = 16f * k;
 
-            DrawScore(s, safe, pad, k);
-            GUI.Label(new Rect(safe.x + pad, Screen.height - 28 * k, 300 * k, 24 * k), "v" + ProductInfo.Version, new GUIStyle(_chip) { alignment = TextAnchor.MiddleLeft });
+            if (s.State != GameState.Ready) DrawScore(s, safe, pad, k); // im Menü würde sie die Menü-Karte überdecken
+            GUI.Label(new Rect(safe.xMax - pad - 300 * k, Screen.height - 28 * k, 300 * k, 24 * k), "v" + ProductInfo.Version, new GUIStyle(_chip) { alignment = TextAnchor.MiddleRight });
 
             if (s.State == GameState.Running || s.State == GameState.Paused)
             {
