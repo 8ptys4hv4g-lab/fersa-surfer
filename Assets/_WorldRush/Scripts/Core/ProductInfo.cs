@@ -7,7 +7,7 @@ namespace WorldRush.Core
     public static class ProductInfo
     {
         public const string DisplayName = "Fersa Surfer";
-        public const string Version = "0.3.0";
+        public const string Version = "0.4.0";
         public const string SaveFileName = "fersasurfer-save.json";
     }
 }

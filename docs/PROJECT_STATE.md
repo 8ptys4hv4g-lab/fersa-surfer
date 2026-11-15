@@ -2,6 +2,12 @@
 
 **Stand:** 2026-11-14 · Version 0.2.0 · **M0 + M1 ✅ in Unity bestätigt** · M2/M7 in Arbeit
 
+## Stand 15.11.2026 · Version 0.4.0 · Store-Vorbereitung
+- **Geprüft:** 132 Kern-Tests bestanden; Unity-Code kompiliert gegen Unity-Referenzen (nur erwartete Meldungen zu neueren APIs).
+- **Neu:** Level/Surfen/Salto, Aufgaben, Münz-Konto, Surfbrett-Shop, DE/EN, Optionen, Tutorial, Credits, Rückkehr ins Menü nach Aufprall, Store-Build-Menü mit eigenem Icon, Store-Unterlagen in `docs/store/`.
+- **Nicht in Unity gesehen:** Optik von Wasser, Menüs, Shop, Optionen, Tutorial-Banner, Icon. → Einmal durchklicken und Screenshots.
+- **Offen bis Store:** Android-Modul installieren, Keystore, AAB bauen, auf Handy testen, Play-Konto (25 $), Datenschutz-Webseite, Screenshots, 14-Tage-Test. Anleitung: `docs/store/RELEASE_CHECKLISTE.md`.
+
 ## Pause – Stand 14.11.2026 (abends)
 **Wo wir stehen:**
 - Unity 6.6 läuft auf dem Windows-PC des Auftraggebers; Projekt unter `D:\Projekte\fersa-surfer`, mit GitHub verbunden (Update: `git -C D:\Projekte\fersa-surfer fetch; git -C D:\Projekte\fersa-surfer reset --hard origin/main`).

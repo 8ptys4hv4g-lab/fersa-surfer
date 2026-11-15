@@ -3,6 +3,16 @@
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
+
+## [0.4.0] – 2026-11-15 · Store-Vorbereitung
+### Hinzugefügt
+- Deutsch/Englisch für alle Texte (automatisch nach Systemsprache, umstellbar).
+- Optionen: Musik, Geräusche, Grafikstufe (Sparsam/Mittel/Hoch für schwache Handys), Sprache, Tutorial wiederholen, Credits & Lizenzen.
+- Tutorial beim ersten Spielen (Hinweise zu Wand, Hürde, Balken, Salto).
+- Pause bei App-Wechsel/Anruf, Bildschirm bleibt beim Spielen an.
+- Editor: „6. Store-Einstellungen + App-Icon“ (eigenes Icon + Store-Grafiken, Paketname, Version, IL2CPP, ARM64, .aab, Querformat) und „7. Android-AAB bauen“ (mit Keystore-Prüfung).
+- Store-Unterlagen: Datenschutzerklärung DE/EN, Store-Texte DE/EN, Antworten Altersfreigabe/Datensicherheit/Familien-Richtlinie, Release-Checkliste.
+- Unity-Kompilierprüfung ohne Unity (`tools/UnityCompileCheck`).
 ### Geändert
 - Nach einem Aufprall: Ergebnis 2 s zeigen, dann zurück ins Startmenü (kein automatischer Neustart). Start nur per Knopf oder Enter. Sieg-Bildschirm mit „Menü“-Knopf.
 ### Hinzugefügt
