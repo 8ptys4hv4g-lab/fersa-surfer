@@ -2,6 +2,13 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
+## [0.4.4] – 2026-11-15
+### Hinzugefügt
+- **Automatisch aktualisieren in Unity** (`Editor/AutoUpdate.cs`): Unity holt neue Versionen alle 2 Minuten selbst von GitHub (nicht während ▶), lädt neu und meldet „Fesara: neue Version geladen“. Keine PowerShell-Befehle mehr. Menü „Fesara → 0. Neueste Version jetzt holen“, abschaltbar über „Fesara → Automatisch aktualisieren“. Geht nur vorwärts; eigene Modelle (Figur, Stadt) bleiben unberührt (getestet an einer Kopie).
+### Behoben
+- Auch Aufgaben-Titel, Brett-Namen und alle Knöpfe im Welt-Editor verkleinern die Schrift statt abgeschnitten zu werden.
+- Oberfläche legt Schrift-Stile nur noch einmal an statt in jedem Bild (weniger Ruckler auf Handys).
+
 ## [0.4.3] – 2026-11-15
 ### Behoben
 - Knopf-Texte werden nicht mehr abgeschnitten (z. B. „Nächstes Level“): alle Knöpfe verkleinern die Schrift automatisch, wenn nötig.

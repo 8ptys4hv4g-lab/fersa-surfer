@@ -34,6 +34,10 @@ Siehe [`docs/BUILD_IN_DER_CLOUD.md`](docs/BUILD_IN_DER_CLOUD.md). GitHub baut do
 3. Am Handy den Entwicklermodus und USB-Debugging einschalten und das Handy per USB anschließen.
 4. **Build And Run** klicken.
 
+## Neue Versionen holen
+Passiert **automatisch**: Unity schaut alle 2 Minuten auf GitHub nach und lädt Neues selbst (Hinweis „Fesara: neue Version geladen“). Danach nur ▶ drücken.
+Sofort holen: Menü **Fesara → 0. Neueste Version jetzt holen**. Abschalten: **Fesara → Automatisch aktualisieren**.
+
 ## Tests
 
 - **In Unity:** Über **Window → General → Test Runner** die Tests unter *EditMode* und *PlayMode* starten.

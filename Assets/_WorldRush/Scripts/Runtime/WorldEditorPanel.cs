@@ -19,7 +19,7 @@ namespace WorldRush.Runtime
         public void Draw(GameRoot root, Rect card, float k, GUIStyle big, GUIStyle mid, GUIStyle small, GUIStyle chip, GUIStyle button, GUIStyle panel, Texture2D white)
         {
             GUI.Box(card, GUIContent.none, panel);
-            GUI.Label(new Rect(card.x, card.y + 10 * k, card.width, 46 * k), L.T("world.title"), new GUIStyle(big) { fontSize = (int)(32 * k) });
+            GUI.Label(new Rect(card.x, card.y + 10 * k, card.width, 46 * k), L.T("world.title"), UiFit.Style(big, (int)(32 * k)));
 
             // Pinsel
             var brushes = new[] { (BrushKind.Tree, "world.tree"), (BrushKind.House, "world.house"), (BrushKind.Garden, "world.garden") };
@@ -28,7 +28,7 @@ namespace WorldRush.Runtime
             {
                 var prev = GUI.color;
                 if (_brush == brushes[i].Item1) GUI.color = GameRoot.NeonCyan;
-                if (GUI.Button(new Rect(card.x + 20 * k + i * (bw + 10 * k), card.y + 60 * k, bw, 42 * k), L.T(brushes[i].Item2), button)) _brush = brushes[i].Item1;
+                if (UiFit.Button(new Rect(card.x + 20 * k + i * (bw + 10 * k), card.y + 60 * k, bw, 42 * k), L.T(brushes[i].Item2), button)) _brush = brushes[i].Item1;
                 GUI.color = prev;
             }
 
@@ -37,14 +37,14 @@ namespace WorldRush.Runtime
             DrawCanvas(root, canvas, white, k);
             HandleInput(root, canvas);
             GUI.Label(new Rect(card.x + 10 * k, canvas.yMax + 4 * k, card.width - 20 * k, 40 * k), _message.Length > 0 ? _message : L.T("world.hint"),
-                new GUIStyle(chip) { wordWrap = true, fontSize = (int)(14 * k) });
+                UiFit.Style(chip, (int)(14 * k), null, false, true));
 
             // Aktionen
             float y = card.yMax - 84 * k, w4 = (card.width - 70 * k) / 4f;
-            if (GUI.Button(new Rect(card.x + 20 * k, y, w4, 50 * k), L.T("world.undo"), button)) { root.WorldDoc.Undo(); _message = ""; }
-            if (GUI.Button(new Rect(card.x + 30 * k + w4, y, w4, 50 * k), L.T("world.clear"), button)) { root.WorldDoc.Clear(); _message = ""; }
-            if (GUI.Button(new Rect(card.x + 40 * k + 2 * w4, y, w4, 50 * k), L.T("world.sample"), button)) { root.LoadSampleWorld(); _message = ""; }
-            if (GUI.Button(new Rect(card.x + 50 * k + 3 * w4, y, w4, 50 * k), root.CustomWorldActive ? L.T("world.standard") : L.T("world.build"), button))
+            if (UiFit.Button(new Rect(card.x + 20 * k, y, w4, 50 * k), L.T("world.undo"), button)) { root.WorldDoc.Undo(); _message = ""; }
+            if (UiFit.Button(new Rect(card.x + 30 * k + w4, y, w4, 50 * k), L.T("world.clear"), button)) { root.WorldDoc.Clear(); _message = ""; }
+            if (UiFit.Button(new Rect(card.x + 40 * k + 2 * w4, y, w4, 50 * k), L.T("world.sample"), button)) { root.LoadSampleWorld(); _message = ""; }
+            if (UiFit.Button(new Rect(card.x + 50 * k + 3 * w4, y, w4, 50 * k), root.CustomWorldActive ? L.T("world.standard") : L.T("world.build"), button))
             {
                 if (root.CustomWorldActive) { root.UseStandardWorld(); _message = L.T("world.standardOn"); }
                 else if (root.WorldDoc.Strokes.Count == 0) _message = L.T("world.empty");
@@ -55,7 +55,7 @@ namespace WorldRush.Runtime
                 }
             }
             if (root.CustomWorldActive)
-                GUI.Label(new Rect(card.x, card.y + 14 * k, card.width - 20 * k, 30 * k), L.T("world.active"), new GUIStyle(chip) { alignment = TextAnchor.MiddleRight });
+                GUI.Label(new Rect(card.x, card.y + 14 * k, card.width - 20 * k, 30 * k), L.T("world.active"), UiFit.Style(chip, 0, TextAnchor.MiddleRight));
         }
 
         // Plan (Meter) ↔ Bildschirm
