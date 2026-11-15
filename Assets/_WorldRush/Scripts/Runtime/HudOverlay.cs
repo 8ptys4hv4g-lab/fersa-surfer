@@ -231,6 +231,7 @@ namespace WorldRush.Runtime
             };
             card.height = panelHeight;
             card.y = Mathf.Max(safe.y + 70 * k, (Screen.height - panelHeight - 70 * k) * 0.5f);
+            if (Screen.width >= card.width * 2.1f) card.x = safe.x + 40 * k; // Figur bleibt rechts sichtbar
             switch (_tab)
             {
                 case 1: DrawMissions(card, k); break;
@@ -250,7 +251,8 @@ namespace WorldRush.Runtime
                 var r = new Rect(x + i * (w + 10 * k), y, w, 48 * k);
                 var prev = GUI.color;
                 if (i == _tab) GUI.color = GameRoot.NeonCyan;
-                if (GUI.Button(r, L.T(TabKeys[i]), _button)) { _tab = i; _shopMessage = ""; _showCredits = false; _confirm = ""; _settingsMessage = ""; }
+                var tabStyle = new GUIStyle(_button) { fontSize = (int)Mathf.Min(20 * k, w / 6.2f), clipping = TextClipping.Overflow };
+                if (GUI.Button(r, L.T(TabKeys[i]), tabStyle)) { _tab = i; _shopMessage = ""; _showCredits = false; _confirm = ""; _settingsMessage = ""; }
                 GUI.color = prev;
             }
         }
@@ -287,7 +289,7 @@ namespace WorldRush.Runtime
             float ly = card.y + 356 * k;
             if (_root.LevelIndex > 0 && GUI.Button(new Rect(card.x + 20 * k, ly, 60 * k, 44 * k), "<", _button)) _root.ChangeLevel(-1);
             int stars = GameRoot.LevelStars(_root.LevelIndex);
-            GUI.Label(new Rect(card.x + 90 * k, ly, card.width - 180 * k, 44 * k), _root.LevelLabel + "   " + new string('*', stars) + new string('-', 3 - stars), new GUIStyle(_mid) { fontSize = (int)(20 * k) });
+            GUI.Label(new Rect(card.x + 90 * k, ly, card.width - 180 * k, 44 * k), _root.LevelLabel + "  ·  " + L.T("menu.stars", stars), new GUIStyle(_mid) { fontSize = (int)(20 * k) });
             if (_root.CanGoNextLevel && GUI.Button(new Rect(card.xMax - 80 * k, ly, 60 * k, 44 * k), ">", _button)) _root.ChangeLevel(1);
 
             float bw = (card.width - 60 * k) * 0.5f;

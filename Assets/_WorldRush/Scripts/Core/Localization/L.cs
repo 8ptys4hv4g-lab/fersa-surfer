@@ -23,6 +23,7 @@ namespace WorldRush.Core
             ["menu.wear"] = ("Anziehen", "Wear"),
             ["menu.character"] = ("Figur: {0}", "Character: {0}"),
             ["menu.level"] = ("Level {0} · {1}", "Level {0} · {1}"),
+            ["menu.stars"] = ("{0}/3 Sterne", "{0}/3 stars"),
             ["menu.play"] = ("Spielen", "Play"),
             ["menu.surfPreview"] = ("Surfen ansehen", "Try surfing"),
             ["hud.coinsBest"] = ("Münzen {0}    Best {1}", "Coins {0}    Best {1}"),
