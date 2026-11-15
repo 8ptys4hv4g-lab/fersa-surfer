@@ -2,6 +2,11 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
+## [0.4.3] – 2026-11-15
+### Behoben
+- Knopf-Texte werden nicht mehr abgeschnitten (z. B. „Nächstes Level“): alle Knöpfe verkleinern die Schrift automatisch, wenn nötig.
+- Level-geschafft-Karte zeigt gezeichnete goldene Sterne statt „**_“.
+
 ## [0.4.2] – 2026-11-15
 ### Hinzugefügt
 - **Gemalter Himmel** statt einfarbigem Lila: Verlauf vom Horizont über Abendrot zum dunkleren Zenit, weiche Wolkenstreifen, Sonne (auch im Startmenü sichtbar), nachts Mond und Sterne. Wechselt mit den 4 Himmelsfarben beim Laufen. Per Code gemalt (`Core/Visuals/SkyPainter.cs`), Neumalen in kleinen Stücken ohne Ruckeln.

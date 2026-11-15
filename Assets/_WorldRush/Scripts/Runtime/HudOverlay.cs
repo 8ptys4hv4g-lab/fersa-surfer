@@ -12,7 +12,8 @@ namespace WorldRush.Runtime
     {
         private GameRoot _root;
         private GUIStyle _big, _mid, _small, _button, _panel, _field, _chip, _banner;
-        private Texture2D _panelTex, _buttonTex, _barTex, _bannerTex;
+        private Texture2D _panelTex, _buttonTex, _barTex, _bannerTex, _starTex;
+        private GUIStyle _fitStyle;
         private float _scale = 1f;
         private string _outfitText;
         private int _tab; // 0 = Start, 1 = Aufgaben, 2 = Shop, 3 = Welt, 4 = Optionen
@@ -44,6 +45,70 @@ namespace WorldRush.Runtime
             return t;
         }
 
+        /// <summary>Knopf, dessen Schrift kleiner wird, wenn der Text sonst abgeschnitten wäre.</summary>
+        private bool Btn(Rect r, string text)
+        {
+            if (_fitStyle == null) _fitStyle = new GUIStyle(_button);
+            int size = _button.fontSize > 0 ? _button.fontSize : 16;
+            _fitStyle.fontSize = size;
+            var content = new GUIContent(text);
+            float room = r.width - 6f;
+            while (_fitStyle.fontSize > 9 && _fitStyle.CalcSize(content).x > room) _fitStyle.fontSize--;
+            return GUI.Button(r, content, _fitStyle);
+        }
+
+        /// <summary>Weißer 5-zackiger Stern mit weichen Kanten (wird beim Zeichnen eingefärbt).</summary>
+        private static Texture2D StarTexture(int size)
+        {
+            var pts = new Vector2[10];
+            for (int i = 0; i < 10; i++)
+            {
+                float a = (90f + i * 36f) * Mathf.Deg2Rad;
+                float rad = i % 2 == 0 ? 0.48f : 0.2f;
+                pts[i] = new Vector2(0.5f + Mathf.Cos(a) * rad, 0.47f + Mathf.Sin(a) * rad);
+            }
+            var px = new Color32[size * size];
+            const int ss = 4;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    int hit = 0;
+                    for (int sy = 0; sy < ss; sy++)
+                        for (int sx = 0; sx < ss; sx++)
+                        {
+                            float u = (x + (sx + 0.5f) / ss) / size, v = (y + (sy + 0.5f) / ss) / size;
+                            bool inside = false;
+                            for (int i = 0, j = pts.Length - 1; i < pts.Length; j = i++)
+                                if ((pts[i].y > v) != (pts[j].y > v) && u < (pts[j].x - pts[i].x) * (v - pts[i].y) / (pts[j].y - pts[i].y) + pts[i].x)
+                                    inside = !inside;
+                            if (inside) hit++;
+                        }
+                    px[y * size + x] = new Color32(255, 255, 255, (byte)(255 * hit / (ss * ss)));
+                }
+            var t = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            t.SetPixels32(px);
+            t.Apply();
+            return t;
+        }
+
+        private void DrawStars(float centerX, float top, int stars, float k)
+        {
+            var prev = GUI.color;
+            float[] scale = { 0.82f, 1.1f, 0.82f };
+            float baseSize = 50f * k, gap = 10f * k;
+            float total = baseSize * (scale[0] + scale[1] + scale[2]) + gap * 2f;
+            float x = centerX - total * 0.5f;
+            for (int i = 0; i < 3; i++)
+            {
+                float sz = baseSize * scale[i];
+                float y = top + (baseSize * 1.1f - sz) * (i == 1 ? 0f : 0.6f);
+                GUI.color = i < stars ? GameRoot.Sun : new Color(1f, 1f, 1f, 0.22f);
+                GUI.DrawTexture(new Rect(x, y, sz, sz), _starTex);
+                x += sz + gap;
+            }
+            GUI.color = prev;
+        }
+
         private void EnsureStyles()
         {
             _scale = Mathf.Clamp(Mathf.Min(Screen.width / 1280f, Screen.height / 720f), 0.55f, 3f);
@@ -51,6 +116,7 @@ namespace WorldRush.Runtime
             _panelTex = Solid(new Color(0.1f, 0.05f, 0.23f, 0.86f));
             _buttonTex = Solid(new Color(1f, 0.82f, 0.25f, 1f));
             _barTex = Solid(Color.white);
+            _starTex = StarTexture(128);
             _bannerTex = Solid(new Color(0.24f, 0.91f, 1f, 0.92f));
             _big = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
             _mid = new GUIStyle(_big) { fontStyle = FontStyle.Normal, wordWrap = true };
@@ -92,7 +158,7 @@ namespace WorldRush.Runtime
             if (s.State == GameState.Running || s.State == GameState.Paused)
             {
                 var pr = new Rect(safe.xMax - pad - 150 * k, safe.y + pad, 150 * k, 52 * k);
-                if (GUI.Button(pr, L.T(s.State == GameState.Paused ? "hud.resume" : "hud.pause"), _button)) _root.TogglePause();
+                if (Btn(pr, L.T(s.State == GameState.Paused ? "hud.resume" : "hud.pause"))) _root.TogglePause();
             }
 
             if (s.State == GameState.Running)
@@ -118,7 +184,7 @@ namespace WorldRush.Runtime
                     Center(ref card, safe, k);
                     GUI.Box(card, GUIContent.none, _panel);
                     GUI.Label(new Rect(card.x, card.y + 20 * k, card.width, 70 * k), L.T("hud.pause"), _big);
-                    if (GUI.Button(new Rect(card.x + (card.width - 240 * k) * 0.5f, card.yMax - 90 * k, 240 * k, 64 * k), L.T("hud.resume"), _button)) _root.TogglePause();
+                    if (Btn(new Rect(card.x + (card.width - 240 * k) * 0.5f, card.yMax - 90 * k, 240 * k, 64 * k), L.T("hud.resume"))) _root.TogglePause();
                     break;
                 case GameState.Won: DrawWon(s, card, safe, k); break;
                 case GameState.GameOver:
@@ -127,7 +193,7 @@ namespace WorldRush.Runtime
                     GUI.Box(card, GUIContent.none, _panel);
                     GUI.Label(new Rect(card.x, card.y + 20 * k, card.width, 70 * k), L.T(s.Score.IsNewHighScore ? "over.best" : "over.title"), _big);
                     GUI.Label(new Rect(card.x, card.y + 100 * k, card.width, 40 * k), L.T("over.stats", (int)s.Score.Distance, s.Score.Coins, s.Score.Score), _mid);
-                    if (GUI.Button(new Rect(card.x + (card.width - 240 * k) * 0.5f, card.yMax - 90 * k, 240 * k, 64 * k), L.T("over.retry"), _button)) _root.Restart();
+                    if (Btn(new Rect(card.x + (card.width - 240 * k) * 0.5f, card.yMax - 90 * k, 240 * k, 64 * k), L.T("over.retry"))) _root.Restart();
                     break;
             }
         }
@@ -207,14 +273,12 @@ namespace WorldRush.Runtime
             GUI.Box(card, GUIContent.none, _panel);
             int stars = s.Stars;
             GUI.Label(new Rect(card.x, card.y + 16 * k, card.width, 64 * k), L.T(stars == 3 ? "won.perfect" : "won.done"), _big);
-            var starStyle = new GUIStyle(_big) { fontSize = (int)(48 * k) };
-            starStyle.normal.textColor = GameRoot.Sun;
-            GUI.Label(new Rect(card.x, card.y + 82 * k, card.width, 60 * k), new string('*', stars) + new string('-', 3 - stars), starStyle);
+            DrawStars(card.center.x, card.y + 82 * k, stars, k);
             GUI.Label(new Rect(card.x, card.y + 150 * k, card.width, 40 * k), L.T("won.stats", s.Score.Coins, s.LevelCoinsTotal, s.Tricks, s.Score.Score), _mid);
             float bw3 = (card.width - 60 * k) / 3f;
-            if (GUI.Button(new Rect(card.x + 20 * k, card.yMax - 84 * k, bw3, 64 * k), L.T("won.next"), _button)) _root.NextLevel();
-            if (GUI.Button(new Rect(card.x + 30 * k + bw3, card.yMax - 84 * k, bw3, 64 * k), L.T("over.retry"), _button)) _root.Restart();
-            if (GUI.Button(new Rect(card.x + 40 * k + 2 * bw3, card.yMax - 84 * k, bw3, 64 * k), L.T("won.menu"), _button)) _root.GoToMenu();
+            if (Btn(new Rect(card.x + 20 * k, card.yMax - 84 * k, bw3, 64 * k), L.T("won.next"))) _root.NextLevel();
+            if (Btn(new Rect(card.x + 30 * k + bw3, card.yMax - 84 * k, bw3, 64 * k), L.T("over.retry"))) _root.Restart();
+            if (Btn(new Rect(card.x + 40 * k + 2 * bw3, card.yMax - 84 * k, bw3, 64 * k), L.T("won.menu"))) _root.GoToMenu();
         }
 
         // ---------- Startmenü ----------
@@ -281,27 +345,27 @@ namespace WorldRush.Runtime
             }
             GUI.Label(new Rect(card.x + 20 * k, card.y + 160 * k, card.width - 40 * k, 30 * k), L.T("menu.outfit"), _small);
             _outfitText = GUI.TextField(new Rect(card.x + 20 * k, card.y + 194 * k, card.width - 190 * k, 44 * k), _outfitText ?? "", 200, _field);
-            if (GUI.Button(new Rect(card.xMax - 160 * k, card.y + 194 * k, 140 * k, 44 * k), L.T("menu.wear"), _button))
+            if (Btn(new Rect(card.xMax - 160 * k, card.y + 194 * k, 140 * k, 44 * k), L.T("menu.wear")))
                 _outfitFeedback = _root.ApplyOutfit(_outfitText);
             GUI.Label(new Rect(card.x + 20 * k, card.y + 246 * k, card.width - 40 * k, 50 * k), string.Join("  ·  ", _outfitFeedback), new GUIStyle(_mid) { fontSize = (int)(16 * k), alignment = TextAnchor.UpperLeft });
 
             if (_root.CharacterCount > 1)
             {
                 float ry = card.y + 300 * k;
-                if (GUI.Button(new Rect(card.x + 20 * k, ry, 60 * k, 44 * k), "<", _button)) _outfitFeedback = _root.NextCharacter(-1) ?? _outfitFeedback;
+                if (Btn(new Rect(card.x + 20 * k, ry, 60 * k, 44 * k), "<")) _outfitFeedback = _root.NextCharacter(-1) ?? _outfitFeedback;
                 GUI.Label(new Rect(card.x + 90 * k, ry, card.width - 180 * k, 44 * k), L.T("menu.character", _root.CharacterName), new GUIStyle(_mid) { fontSize = (int)(22 * k) });
-                if (GUI.Button(new Rect(card.xMax - 80 * k, ry, 60 * k, 44 * k), ">", _button)) _outfitFeedback = _root.NextCharacter(1) ?? _outfitFeedback;
+                if (Btn(new Rect(card.xMax - 80 * k, ry, 60 * k, 44 * k), ">")) _outfitFeedback = _root.NextCharacter(1) ?? _outfitFeedback;
             }
 
             float ly = card.y + 356 * k;
-            if (_root.LevelIndex > 0 && GUI.Button(new Rect(card.x + 20 * k, ly, 60 * k, 44 * k), "<", _button)) _root.ChangeLevel(-1);
+            if (_root.LevelIndex > 0 && Btn(new Rect(card.x + 20 * k, ly, 60 * k, 44 * k), "<")) _root.ChangeLevel(-1);
             int stars = GameRoot.LevelStars(_root.LevelIndex);
             GUI.Label(new Rect(card.x + 90 * k, ly, card.width - 180 * k, 44 * k), _root.LevelLabel + "  ·  " + L.T("menu.stars", stars), new GUIStyle(_mid) { fontSize = (int)(20 * k) });
-            if (_root.CanGoNextLevel && GUI.Button(new Rect(card.xMax - 80 * k, ly, 60 * k, 44 * k), ">", _button)) _root.ChangeLevel(1);
+            if (_root.CanGoNextLevel && Btn(new Rect(card.xMax - 80 * k, ly, 60 * k, 44 * k), ">")) _root.ChangeLevel(1);
 
             float bw = (card.width - 60 * k) * 0.5f;
-            if (GUI.Button(new Rect(card.x + 20 * k, card.yMax - 90 * k, bw, 66 * k), L.T("menu.play"), _button)) _root.StartRun();
-            if (GUI.Button(new Rect(card.x + 40 * k + bw, card.yMax - 90 * k, bw, 66 * k), L.T("menu.surfPreview"), _button)) _root.StartAtWater();
+            if (Btn(new Rect(card.x + 20 * k, card.yMax - 90 * k, bw, 66 * k), L.T("menu.play"))) _root.StartRun();
+            if (Btn(new Rect(card.x + 40 * k + bw, card.yMax - 90 * k, bw, 66 * k), L.T("menu.surfPreview"))) _root.StartAtWater();
         }
 
         private void DrawMissions(Rect card, float k)
@@ -359,8 +423,8 @@ namespace WorldRush.Runtime
                 var br = new Rect(card.xMax - 216 * k, y, 192 * k, 48 * k);
                 bool owned = _root.OwnsBoard(item.Id);
                 if (owned && _root.SelectedBoard == item.Id) GUI.Label(br, L.T("shop.selected"), _chip);
-                else if (owned) { if (GUI.Button(br, L.T("shop.select"), _button)) _root.SelectBoard(item.Id); }
-                else if (GUI.Button(br, L.T("shop.price", item.Price), _button))
+                else if (owned) { if (Btn(br, L.T("shop.select"))) _root.SelectBoard(item.Id); }
+                else if (Btn(br, L.T("shop.price", item.Price)))
                 {
                     var result = _root.BuyBoard(item.Id);
                     _shopMessage = result == BoardShop.BuyResult.Bought ? L.T("shop.bought") : result == BoardShop.BuyResult.NotEnoughCoins ? L.T("shop.tooPoor") : "";
@@ -394,7 +458,7 @@ namespace WorldRush.Runtime
             {
                 var prev = GUI.color;
                 if (st.Quality == q) GUI.color = GameRoot.NeonCyan;
-                if (GUI.Button(new Rect(x + lw + q * (qw + 10 * k), y, qw, 44 * k), L.T("quality." + q), _button) && st.Quality != q) { st.Quality = q; changed = true; }
+                if (Btn(new Rect(x + lw + q * (qw + 10 * k), y, qw, 44 * k), L.T("quality." + q)) && st.Quality != q) { st.Quality = q; changed = true; }
                 GUI.color = prev;
             }
             y += 64 * k;
@@ -405,25 +469,25 @@ namespace WorldRush.Runtime
                 var lang = (Language)i;
                 var prev = GUI.color;
                 if (st.Language == lang) GUI.color = GameRoot.NeonCyan;
-                if (GUI.Button(new Rect(x + lw + i * (sw * 0.5f + 5 * k), y, sw * 0.5f - 5 * k, 44 * k), L.Raw("lang.name", lang), _button) && st.Language != lang) { st.Language = lang; changed = true; }
+                if (Btn(new Rect(x + lw + i * (sw * 0.5f + 5 * k), y, sw * 0.5f - 5 * k, 44 * k), L.Raw("lang.name", lang)) && st.Language != lang) { st.Language = lang; changed = true; }
                 GUI.color = prev;
             }
             y += 74 * k;
 
             float bw = (card.width - 68 * k) * 0.5f;
-            if (GUI.Button(new Rect(x, y, bw, 54 * k), L.T("settings.tutorial"), _button)) _root.ReplayTutorial();
-            if (GUI.Button(new Rect(x + bw + 20 * k, y, bw, 54 * k), L.T("settings.credits"), _button)) _showCredits = true;
+            if (Btn(new Rect(x, y, bw, 54 * k), L.T("settings.tutorial"))) _root.ReplayTutorial();
+            if (Btn(new Rect(x + bw + 20 * k, y, bw, 54 * k), L.T("settings.credits"))) _showCredits = true;
             y += 70 * k;
 
             // Zurücksetzen – mit Bestätigung (zweimal tippen)
-            if (GUI.Button(new Rect(x, y, bw, 54 * k), _confirm == "world" ? L.T("settings.confirm") : L.T("settings.resetWorld"), _button))
+            if (Btn(new Rect(x, y, bw, 54 * k), _confirm == "world" ? L.T("settings.confirm") : L.T("settings.resetWorld")))
             {
                 if (_confirm == "world") { _root.RestoreDefaultCity(); _confirm = ""; _settingsMessage = L.T("settings.resetDone"); }
                 else { _confirm = "world"; _settingsMessage = ""; }
             }
             var prevColor = GUI.color;
             if (_confirm == "all") GUI.color = new Color(1f, 0.55f, 0.55f);
-            if (GUI.Button(new Rect(x + bw + 20 * k, y, bw, 54 * k), _confirm == "all" ? L.T("settings.confirm") : L.T("settings.resetAll"), _button))
+            if (Btn(new Rect(x + bw + 20 * k, y, bw, 54 * k), _confirm == "all" ? L.T("settings.confirm") : L.T("settings.resetAll")))
             {
                 if (_confirm == "all") { _confirm = ""; _root.ResetEverything(); }
                 else { _confirm = "all"; _settingsMessage = ""; }
@@ -442,7 +506,7 @@ namespace WorldRush.Runtime
             GUI.Label(new Rect(card.x, card.y + 14 * k, card.width, 50 * k), L.T("settings.credits"), new GUIStyle(_big) { fontSize = (int)(34 * k) });
             GUI.Label(new Rect(card.x + 30 * k, card.y + 80 * k, card.width - 60 * k, card.height - 170 * k), L.T("credits.text"),
                 new GUIStyle(_mid) { fontSize = (int)(19 * k), alignment = TextAnchor.UpperCenter });
-            if (GUI.Button(new Rect(card.x + (card.width - 220 * k) * 0.5f, card.yMax - 76 * k, 220 * k, 56 * k), L.T("settings.back"), _button)) _showCredits = false;
+            if (Btn(new Rect(card.x + (card.width - 220 * k) * 0.5f, card.yMax - 76 * k, 220 * k, 56 * k), L.T("settings.back"))) _showCredits = false;
         }
 
         private void OnDestroy()
