@@ -102,6 +102,7 @@ namespace WorldRush.EditorTools
 
             int n = 0;
             string first = null;
+            var copiedCharacters = new List<string>();
             foreach (var path in candidates)
             {
                 var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -109,8 +110,10 @@ namespace WorldRush.EditorTools
                 if (go.GetComponentInChildren<Animator>(true) == null && go.GetComponentInChildren<Animation>(true) == null) continue; // ganze, animierbare Figur
                 string lowerName = go.name.ToLowerInvariant();
                 if (Has(lowerName, PartWords)) continue; // keine Einzelteile (Haare, Gesicht, Accessoires …)
-                if (!AssetDatabase.CopyAsset(path, folder + "/" + System.IO.Path.GetFileName(path))) continue;
-                first ??= go.name;
+                string copy = folder + "/" + System.IO.Path.GetFileName(path);
+                if (!AssetDatabase.CopyAsset(path, copy)) continue;
+                copiedCharacters.Add(copy);
+                if (first == null || (go.name.ToLowerInvariant().Contains("set") && !first.ToLowerInvariant().Contains("set"))) first = go.name;
                 n++;
                 if (n >= 30) break;
             }
@@ -121,11 +124,23 @@ namespace WorldRush.EditorTools
                 return;
             }
             UnityEngine.PlayerPrefs.SetString("fs-character", first);
-            Debug.Log($"[FersaSurfer] {n} Figur(en) übernommen. Im Startmenü mit < > auswählen.");
-            EditorUtility.DisplayDialog("Fersa Surfer", $"{n} Figur(en) übernommen.\nIm Startmenü mit < > auswählen, dann ▶.", "OK");
+            var charStats = new Dictionary<string, int>();
+            int converted = ConvertMaterials(copiedCharacters, folder + "/Materials", charStats);
+            int withRun = 0;
+            foreach (var path in copiedCharacters)
+            {
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                var anim = go != null ? go.GetComponentInChildren<Animator>(true) : null;
+                if (anim != null && anim.runtimeAnimatorController != null)
+                    foreach (var clip in anim.runtimeAnimatorController.animationClips)
+                        if (clip != null && (clip.name.ToLowerInvariant().Contains("run") || clip.name.ToLowerInvariant().Contains("walk"))) { withRun++; break; }
+            }
+            string report = $"{n} Figur(en) übernommen.\n{converted} Material(ien) für URP umgewandelt.\nMit Lauf-Animation: {withRun}.\nShader: {Top(charStats)}\n\nIm Startmenü mit < > auswählen, dann ▶.";
+            Debug.Log("[FersaSurfer] " + report.Replace("\n", " | "));
+            EditorUtility.DisplayDialog("Fersa Surfer", report, "OK");
         }
 
-        private static readonly string[] PartWords = { "acc", "hair", "face", "prop", "guide", "preview", "dummy", "weapon", "costume0", "blendshape" };
+        private static readonly string[] PartWords = { "acc", "hair", "face", "prop", "guide", "preview", "dummy", "weapon", "blendshape" };
         private static readonly string[] BuildingWords = { "building", "house", "shop", "store", "tower", "apartment", "office", "bank", "hospital", "school", "cafe", "restaurant", "hotel", "market", "skyscraper", "home", "station", "bakery", "cinema", "mall" };
         private static readonly string[] CarWords = { "car", "taxi", "bus", "truck", "van", "police", "ambulance", "vehicle", "suv", "pickup", "firetruck" };
         private static readonly string[] SkipWords = { "road", "street", "crossing", "sidewalk", "terrain", "ground", "tile", "floor", "plane", "base", "demo", "scene", "camera", "light probe" };
@@ -155,18 +170,26 @@ namespace WorldRush.EditorTools
             }
 
             int b = 0, c = 0, p = 0, skipped = 0;
+            var copiedCity = new List<string>();
+            if (AssetDatabase.IsValidFolder(env + "/Materials")) AssetDatabase.DeleteAsset(env + "/Materials");
             foreach (var guid in guids)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 string name = System.IO.Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
                 if (Has(name, SkipWords)) { skipped++; continue; }
                 string sub = Has(name, CarWords) ? "Cars" : Has(name, BuildingWords) ? "Buildings" : "Props";
-                if (!AssetDatabase.CopyAsset(path, $"{env}/{sub}/{System.IO.Path.GetFileName(path)}")) continue;
+                string target = $"{env}/{sub}/{System.IO.Path.GetFileName(path)}";
+                if (!AssetDatabase.CopyAsset(path, target)) continue;
+                copiedCity.Add(target);
                 if (sub == "Cars") c++; else if (sub == "Buildings") b++; else p++;
             }
             AssetDatabase.Refresh();
             Debug.Log($"[FersaSurfer] Stadt übernommen: {b} Gebäude, {c} Autos, {p} Deko ({skipped} Straßen-/Bodenteile übersprungen). ▶ drücken.");
-            EditorUtility.DisplayDialog("Fersa Surfer", $"Übernommen: {b} Gebäude, {c} Autos, {p} Deko.\nJetzt ▶ drücken.", "OK");
+            var cityStats = new Dictionary<string, int>();
+            int cityConverted = ConvertMaterials(copiedCity, env + "/Materials", cityStats);
+            string cityReport = $"Übernommen: {b} Gebäude, {c} Autos, {p} Deko.\n{cityConverted} Material(ien) für URP umgewandelt.\nShader: {Top(cityStats)}\n\nJetzt ▶ drücken.";
+            Debug.Log("[FersaSurfer] " + cityReport.Replace("\n", " | "));
+            EditorUtility.DisplayDialog("Fersa Surfer", cityReport, "OK");
         }
 
 /// <summary>Sucht den Ordner eines importierten Stadt-Pakets (Name enthält "city"/"town"), bevorzugt dessen Prefabs-Ordner.</summary>
@@ -186,7 +209,68 @@ namespace WorldRush.EditorTools
             return best;
         }
 
-                private static bool Has(string name, string[] words)
+                /// <summary>
+        /// Ersetzt in den kopierten Prefabs alle nicht-URP-Materialien dauerhaft durch URP/Lit-Materialien
+        /// (Textur + Farbe übernommen). Zählt die gefundenen Shader für die Anzeige.
+        /// </summary>
+        private static int ConvertMaterials(List<string> prefabPaths, string materialFolder, Dictionary<string, int> shaderStats)
+        {
+            int converted = 0;
+            var cache = new Dictionary<Material, Material>();
+            foreach (var path in prefabPaths)
+            {
+                if (!path.EndsWith(".prefab")) continue;
+                GameObject root;
+                try { root = PrefabUtility.LoadPrefabContents(path); }
+                catch { continue; }
+                bool dirty = false;
+                foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (r is ParticleSystemRenderer) continue;
+                    var mats = r.sharedMaterials;
+                    for (int i = 0; i < mats.Length; i++)
+                    {
+                        var m = mats[i];
+                        if (m == null) continue;
+                        string sh = m.shader != null ? m.shader.name : "(kein Shader)";
+                        shaderStats[sh] = shaderStats.TryGetValue(sh, out int cnt) ? cnt + 1 : 1;
+                        if (!cache.TryGetValue(m, out var conv))
+                        {
+                            conv = MaterialFactory.MakeCompatible(m);
+                            if (conv != m)
+                            {
+                                if (!AssetDatabase.IsValidFolder(materialFolder))
+                                {
+                                    string parent = System.IO.Path.GetDirectoryName(materialFolder).Replace('\\', '/');
+                                    AssetDatabase.CreateFolder(parent, System.IO.Path.GetFileName(materialFolder));
+                                }
+                                string safe = string.Join("_", m.name.Split(System.IO.Path.GetInvalidFileNameChars()));
+                                AssetDatabase.CreateAsset(conv, AssetDatabase.GenerateUniqueAssetPath($"{materialFolder}/{safe}.mat"));
+                                converted++;
+                            }
+                            cache[m] = conv;
+                        }
+                        if (conv != m) { mats[i] = conv; dirty = true; }
+                    }
+                    if (dirty) r.sharedMaterials = mats;
+                }
+                if (dirty) PrefabUtility.SaveAsPrefabAsset(root, path);
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            AssetDatabase.SaveAssets();
+            return converted;
+        }
+
+        private static string Top(Dictionary<string, int> stats)
+        {
+            var list = new List<KeyValuePair<string, int>>(stats);
+            list.Sort((x, y) => y.Value.CompareTo(x.Value));
+            var parts = new List<string>();
+            for (int i = 0; i < list.Count && i < 3; i++) parts.Add($"{list[i].Key} ({list[i].Value})");
+            return parts.Count > 0 ? string.Join(", ", parts) : "-";
+        }
+
+        private static bool Has(string name, string[] words)
         {
             foreach (var w in words) if (name.Contains(w)) return true;
             return false;
