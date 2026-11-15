@@ -6,8 +6,9 @@ using WorldRush.Core.World;
 namespace WorldRush.Runtime
 {
     /// <summary>
-    /// Zeichenfläche des Welt-Editors (Draufsicht). Pinsel: Baum, Haus, Garten.
+    /// Zeichenfläche des Welt-Editors (Draufsicht). Pinsel: Baum, Haus, Garten, Wasser, Hügel.
     /// Finger/Maus zeichnen; "In 3D bauen" macht daraus echte 3D-Objekte neben der Laufstrecke.
+    /// Wasser über der Straße wird zur Surf-Strecke im eigenen Level – das sieht man sofort auf der Zeichenfläche.
     /// </summary>
     public sealed class WorldEditorPanel
     {
@@ -15,6 +16,8 @@ namespace WorldRush.Runtime
         private BrushKind _brush = BrushKind.Tree;
         private List<Vec2> _current;
         private string _message = "";
+        private int _surfVersion = -1;
+        private List<(float start, float end)> _surf = new List<(float start, float end)>();
 
         public void Draw(GameRoot root, Rect card, float k, GUIStyle big, GUIStyle mid, GUIStyle small, GUIStyle chip, GUIStyle button, GUIStyle panel, Texture2D white)
         {
@@ -22,8 +25,8 @@ namespace WorldRush.Runtime
             GUI.Label(new Rect(card.x, card.y + 10 * k, card.width, 46 * k), L.T("world.title"), UiFit.Style(big, (int)(32 * k)));
 
             // Pinsel
-            var brushes = new[] { (BrushKind.Tree, "world.tree"), (BrushKind.House, "world.house"), (BrushKind.Garden, "world.garden") };
-            float bw = (card.width - 60 * k) / 3f;
+            var brushes = new[] { (BrushKind.Water, "world.water"), (BrushKind.Tree, "world.tree"), (BrushKind.House, "world.house"), (BrushKind.Garden, "world.garden"), (BrushKind.Hill, "world.hill") };
+            float bw = (card.width - 40 * k - 10 * k * (brushes.Length - 1)) / brushes.Length;
             for (int i = 0; i < brushes.Length; i++)
             {
                 var prev = GUI.color;
@@ -34,7 +37,7 @@ namespace WorldRush.Runtime
 
             // Zeichenfläche
             var canvas = new Rect(card.x + 20 * k, card.y + 112 * k, card.width - 40 * k, card.height - 250 * k);
-            DrawCanvas(root, canvas, white, k);
+            DrawCanvas(root, canvas, white, k, chip);
             HandleInput(root, canvas);
             GUI.Label(new Rect(card.x + 10 * k, canvas.yMax + 4 * k, card.width - 20 * k, 40 * k), _message.Length > 0 ? _message : L.T("world.hint"),
                 UiFit.Style(chip, (int)(14 * k), null, false, true));
@@ -51,7 +54,7 @@ namespace WorldRush.Runtime
                 else
                 {
                     var notes = root.BuildCustomWorld();
-                    _message = L.T("world.built") + (notes.Count > 0 && L.Current == Language.German ? "  " + notes[0] : "");
+                    _message = L.T("world.built") + (notes.Count > 0 ? "  " + notes[0] : "");
                 }
             }
             if (root.CustomWorldActive)
@@ -65,7 +68,7 @@ namespace WorldRush.Runtime
         private static Vec2 ToPlan(Rect c, Vector2 s) =>
             new Vec2((s.x - c.x) / c.width * 2f * ViewHalfWidth - ViewHalfWidth, (c.yMax - s.y) / c.height * DrawingDocument.PlanLength);
 
-        private void DrawCanvas(GameRoot root, Rect c, Texture2D white, float k)
+        private void DrawCanvas(GameRoot root, Rect c, Texture2D white, float k, GUIStyle chip)
         {
             var prev = GUI.color;
             GUI.color = new Color(0.2f, 0.16f, 0.36f, 1f);
@@ -77,6 +80,28 @@ namespace WorldRush.Runtime
             GUI.DrawTexture(new Rect(a.x - 6 * k, c.y, b.x - a.x + 12 * k, c.height), white);
             GUI.color = new Color(0.12f, 0.1f, 0.22f, 1f);
             GUI.DrawTexture(new Rect(a.x, c.y, b.x - a.x, c.height), white);
+
+            // Surf-Strecken (aus dem gemalten Wasser) gleich auf der Straße zeigen
+            if (_surfVersion != root.WorldDoc.Version || _surfVersion < 0)
+            {
+                _surf = WorldLevel.SurfSections(root.WorldDoc.Strokes);
+                _surfVersion = root.WorldDoc.Version;
+            }
+            foreach (var (start, end) in _surf)
+            {
+                var top = ToScreen(c, new Vec2(-WorldLevel.RoadReach, end));
+                var bottom = ToScreen(c, new Vec2(WorldLevel.RoadReach, start));
+                var zone = Rect.MinMaxRect(top.x, top.y, bottom.x, bottom.y);
+                GUI.color = new Color(0.25f, 0.8f, 1f, 0.55f);
+                GUI.DrawTexture(zone, white);
+                GUI.color = Color.white;
+                var label = UiFit.Style(chip, (int)(12 * k), TextAnchor.MiddleCenter);
+                GUI.Label(new Rect(zone.center.x - 50 * k, zone.center.y - 10 * k, 100 * k, 20 * k), L.T("world.surf"), label);
+            }
+            // Ziel-Linie
+            var f0 = ToScreen(c, new Vec2(-WorldBuilder.TrackHalfWidth - 2f, WorldLevel.Length - 2f));
+            GUI.color = new Color(1f, 1f, 1f, 0.8f);
+            GUI.DrawTexture(new Rect(f0.x, c.y, (WorldBuilder.TrackHalfWidth + 2f) * 2f / (2f * ViewHalfWidth) * c.width, 3f * k), white);
 
             foreach (var st in root.WorldDoc.Strokes) DrawStroke(c, st.Brush, st.Points, white, k, 1f);
             if (_current != null) DrawStroke(c, _brush, _current, white, k, 0.7f);
@@ -95,8 +120,14 @@ namespace WorldRush.Runtime
                 GUI.DrawTexture(Rect.MinMaxRect(p0.x, p0.y, Mathf.Max(p1.x, p0.x + 4f), Mathf.Max(p1.y, p0.y + 4f)), white);
                 return;
             }
-            GUI.color = brush == BrushKind.Tree ? new Color(0.45f, 0.95f, 0.55f, alpha) : new Color(1f, 0.5f, 0.78f, alpha);
-            float dot = (brush == BrushKind.Tree ? 9f : 6f) * k;
+            GUI.color = brush switch
+            {
+                BrushKind.Tree => new Color(0.45f, 0.95f, 0.55f, alpha),
+                BrushKind.Water => new Color(0.3f, 0.72f, 1f, alpha),
+                BrushKind.Hill => new Color(0.62f, 0.8f, 0.4f, alpha),
+                _ => new Color(1f, 0.5f, 0.78f, alpha)
+            };
+            float dot = (brush == BrushKind.Water ? 12f : brush == BrushKind.Tree ? 9f : 6f) * k;
             for (int i = 0; i < pts.Count; i++)
             {
                 var s = ToScreen(c, pts[i]);
@@ -146,6 +177,7 @@ namespace WorldRush.Runtime
                 return;
             }
             if (_brush == BrushKind.Garden && pts.Count < 3) { _message = L.T("world.hint"); return; }
+            if (pts.Count == 1 && Vec2.Distance(pts[0], end) > 1.2f) pts.Add(end);
             root.WorldDoc.AddStroke(_brush, pts, 0.8f);
         }
 

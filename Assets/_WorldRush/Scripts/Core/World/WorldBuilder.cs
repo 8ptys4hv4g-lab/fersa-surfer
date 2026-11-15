@@ -170,9 +170,19 @@ namespace WorldRush.Core.World
 
         private static void AddWater(Stroke s, WorldPlan plan)
         {
+            // Wasser über der Straße wird zur Surf-Strecke (siehe WorldLevel) – kein See.
+            if (WorldLevel.TouchesRoad(s)) return;
             if (s.Points.Count < 3)
             {
-                plan.Warnings.Add("Wasser braucht eine Fläche – bitte einen Umriss zeichnen.");
+                // Antippen oder kurzer Strich: kleiner runder Teich
+                var c = Geometry.Centroid(s.Points);
+                var pond = new List<Vec2>();
+                for (int i = 0; i < 12; i++)
+                {
+                    double a = i * Math.PI * 2 / 12;
+                    pond.Add(new Vec2(c.X + 5f * (float)Math.Cos(a), c.Y + 5f * (float)Math.Sin(a)));
+                }
+                plan.WaterAreas.Add(pond);
                 return;
             }
             plan.WaterAreas.Add(new List<Vec2>(s.Points)); // Polygon wird automatisch geschlossen

@@ -14,7 +14,8 @@ Lauf los und surf durch die Stadt! In Fesara flitzt deine Figur durch bunte Stra
 • Power-ups: Hoverboard, Magnet, Schild und doppelte Punkte
 • Jeden Tag 3 neue Aufgaben mit Belohnungen
 • Surfbrett-Shop – nur mit Spiel-Münzen, ganz ohne echtes Geld
-• Outfit per Text: „pinke Haare, schwarzer Hoodie“ – und die Figur zieht es an
+• Male deine eigene Welt: Wo du Wasser über die Straße malst, surfst du – dein eigenes Level mit Ziel und Sternen
+• Look-Studio: Farben antippen, würfeln oder fertige Ideen wie „Meerjungfrau“ – oder einfach hinschreiben: „pinke Haare, schwarzer Hoodie“
 • Einfache Steuerung: wischen oder Pfeiltasten
 • Deutsch und Englisch
 
@@ -36,7 +37,8 @@ Run and surf through the city! In Fesara your hero dashes through colourful stre
 • Power-ups: hoverboard, magnet, shield and double points
 • 3 new daily missions with rewards
 • Board shop – game coins only, no real money
-• Outfit by text: "pink hair, black hoodie" – and your hero wears it
+• Paint your own world: wherever you paint water across the road, you surf – your own level with finish and stars
+• Look studio: tap colours, roll the dice or pick ideas like "Mermaid" – or just type "pink hair, black hoodie"
 • Simple controls: swipe or arrow keys
 • English and German
 

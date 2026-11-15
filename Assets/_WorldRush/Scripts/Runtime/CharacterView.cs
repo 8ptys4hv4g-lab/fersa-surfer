@@ -50,7 +50,7 @@ namespace WorldRush.Runtime
             { "red", Hex("#e8304a") }, { "blue", Hex("#3a6ee8") }, { "green", Hex("#2fcf7a") }, { "yellow", Hex("#ffd23f") },
             { "black", Hex("#24203a") }, { "white", Hex("#f4f2ff") }, { "brown", Hex("#7a4a2a") }, { "blonde", Hex("#f5d36b") },
             { "pink", Hex("#ff7ac8") }, { "purple", Hex("#8f5bff") }, { "orange", Hex("#ff8a3d") }, { "grey", Hex("#9a98b0") },
-            { "silver", Hex("#d6d8e6") }, { "gold", Hex("#e3b23c") }, { "beige", Hex("#e8d3b0") }
+            { "silver", Hex("#d6d8e6") }, { "gold", Hex("#e3b23c") }, { "beige", Hex("#e8d3b0") }, { "turquoise", Hex("#2fd7e0") }
         };
 
         /// <summary>Schlüsselwörter in Material-/Objektnamen, um Outfit-Farben auf echte Modelle zu übertragen.</summary>
@@ -103,6 +103,9 @@ namespace WorldRush.Runtime
                 _animator = _animation == null ? _model.GetComponentInChildren<Animator>() : null;
                 if (_animator != null) _animator.applyRootMotion = false; // Bewegung macht die Spiellogik
                 PickClips();
+                var mats = new List<string>();
+                foreach (var r in _modelRenderers) { var names = new List<string>(); foreach (var m in r.sharedMaterials) if (m != null) names.Add(m.name.Replace(" (Instance)", "")); mats.Add(r.name + "(" + string.Join(",", names) + ")"); }
+                Debug.Log("[Fesara] Figur-Materialien (für Outfit-Farben): " + string.Join(" ", mats));
                 Debug.Log($"[Fesara] 3D-Figur geladen: {prefab.name} · Renderer: {_modelRenderers.Length} · " +
                           $"Animationen: {(_animation != null ? _animation.GetClipCount() : _states.Count)} {(_animator != null ? "[Animator]" : "[Legacy]")} (Laufen: {_runClip ?? "-"}, Springen: {_jumpClip ?? "-"}, Stehen: {_idleClip ?? "-"})");
             }
@@ -246,13 +249,15 @@ namespace WorldRush.Runtime
 
             foreach (var choice in matched)
             {
-                if (choice.Item == null) { feedback.Add("Nicht im Katalog: " + SlotName(choice.Wish.Slot)); continue; }
-                bool colored = choice.Color != null && Palette.TryGetValue(choice.Color, out var color) && Recolor(choice.Wish.Slot, color);
-                string note = choice.Quality == MatchQuality.Exact ? "" : " (Ersatz)";
-                if (UsesModel && choice.Color != null && !colored) note = " (an diesem Modell nicht färbbar)";
-                feedback.Add($"{SlotName(choice.Wish.Slot)}: {ColorName(choice.Color)}{note}");
+                if (choice.Item == null) { feedback.Add(L.T("outfit.missing", SlotName(choice.Wish.Slot))); continue; }
+                // Gewünschte Farbe hat Vorrang: Färben klappt mit jeder Farbe aus der Palette, nicht nur mit Katalogfarben.
+                string colorId = choice.Wish.Color != null && Palette.ContainsKey(choice.Wish.Color) ? choice.Wish.Color : choice.Color;
+                bool colored = colorId != null && Palette.TryGetValue(colorId, out var color) && Recolor(choice.Wish.Slot, color);
+                string note = "";
+                if (UsesModel && colorId != null && !colored) note = " " + L.T("outfit.notColorable");
+                feedback.Add($"{SlotName(choice.Wish.Slot)}: {OutfitStudio.ColorName(colorId, L.Current)}{note}");
             }
-            foreach (var w in parsed.UnknownWords) if (feedback.Count < 6) feedback.Add("Unbekannt: " + w);
+            foreach (var w in parsed.UnknownWords) if (feedback.Count < 6) feedback.Add(L.T("outfit.unknown", w));
             return feedback;
         }
 
@@ -274,6 +279,20 @@ namespace WorldRush.Runtime
                 return true;
             }
 
+            if (RecolorByKeywords(slot, color)) return true;
+            // Ersatz, wenn das Modell den Bereich nicht hat: Kleid → Oberteil + Hose, Oberteil → Kleid
+            if (slot == OutfitSlot.Dress)
+            {
+                bool top = RecolorByKeywords(OutfitSlot.Top, color);
+                bool bottom = RecolorByKeywords(OutfitSlot.Bottom, color);
+                return top || bottom;
+            }
+            if (slot == OutfitSlot.Top) return RecolorByKeywords(OutfitSlot.Dress, color);
+            return false;
+        }
+
+        private bool RecolorByKeywords(OutfitSlot slot, Color color)
+        {
             bool any = false;
             var keys = SlotKeywords[slot];
             foreach (var r in _modelRenderers)
@@ -416,24 +435,15 @@ namespace WorldRush.Runtime
             if (m.HasProperty("_Color")) m.SetColor("_Color", c);
         }
 
-        private static string SlotName(OutfitSlot slot) => slot switch
+        private static string SlotName(OutfitSlot slot) => L.T(slot switch
         {
-            OutfitSlot.Hair => "Haare",
-            OutfitSlot.Dress => "Kleid",
-            OutfitSlot.Top => "Oberteil",
-            OutfitSlot.Bottom => "Hose/Rock",
-            OutfitSlot.Shoes => "Schuhe",
-            _ => "Mütze"
-        };
-
-        private static readonly Dictionary<string, string> GermanColors = new Dictionary<string, string>
-        {
-            { "red", "rot" }, { "blue", "blau" }, { "green", "grün" }, { "yellow", "gelb" }, { "black", "schwarz" },
-            { "white", "weiß" }, { "brown", "braun" }, { "blonde", "blond" }, { "pink", "pink" }, { "purple", "lila" },
-            { "orange", "orange" }, { "grey", "grau" }, { "silver", "silber" }, { "gold", "gold" }, { "beige", "beige" }
-        };
-
-        private static string ColorName(string id) => id != null && GermanColors.TryGetValue(id, out var de) ? de : "-";
+            OutfitSlot.Hair => "look.hair",
+            OutfitSlot.Dress => "look.dress",
+            OutfitSlot.Top => "look.top",
+            OutfitSlot.Bottom => "look.bottom",
+            OutfitSlot.Shoes => "look.shoes",
+            _ => "look.cap"
+        });
 
         public static Color Hex(string hex) => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.magenta;
     }

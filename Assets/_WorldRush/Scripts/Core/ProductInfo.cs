@@ -10,7 +10,7 @@ namespace WorldRush.Core
         /// <summary>Untertitel unter dem Logo und im Store-Namen ("Fesara – Run & Surf").</summary>
         public const string Tagline = "Run & Surf";
         public const string StoreTitle = DisplayName + " \u2013 " + Tagline;
-        public const string Version = "0.4.4";
+        public const string Version = "0.5.0";
         // Bleibt absichtlich gleich, damit vorhandene Spielstände erhalten bleiben.
         public const string SaveFileName = "fersasurfer-save.json";
     }

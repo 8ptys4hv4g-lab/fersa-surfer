@@ -155,7 +155,8 @@ namespace WorldRush.Core.Outfits
             Add("grey", "grau", "grey", "gray");
             Add("silver", "silber", "silbern", "silver");
             Add("gold", "gold", "golden");
-            Add("beige", "beige");
+            Add("beige", "beige", "beig");
+            Add("turquoise", "türkis", "tuerkis", "turquoise", "türkies");
             return d;
         }
 

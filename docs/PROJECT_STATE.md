@@ -2,6 +2,11 @@
 
 **Stand:** 2026-11-14 · Version 0.2.0 · **M0 + M1 ✅ in Unity bestätigt** · M2/M7 in Arbeit
 
+## Stand 15.11.2026 · Version 0.5.0 · Eigenes Level malen + Look-Studio
+- Welt-Editor: Pinsel Wasser/Hügel; Wasser über der Straße = Surf-Strecke im eigenen Level (Ziel + Sterne), daneben = See.
+- Look-Tab: Farben antippen, Würfeln, 6 Ideen, Eintippen; Outfit wird gespeichert.
+- Getestet: 161 Kern-Tests ✅ (inkl. Durchspielen eines gemalten Levels und Rundlauf Look → Text → Look), Unity-Kompilierprüfung ✅. **Nicht** in Unity gesehen: Look-Tab-Layout, Seen, Surf-Markierung im Editor, ob das Quaternius-Modell die Farben annimmt (Material-Namen stehen jetzt im Protokoll).
+
 ## Stand 15.11.2026 · Version 0.4.4 · Automatisch aktualisieren + Oberfläche
 - Unity aktualisiert sich selbst von GitHub (`Editor/AutoUpdate.cs`). Git-Ablauf an einer Kopie getestet ✅ (alter Stand → neuester, eigene Modelldatei blieb). In Unity selbst noch nicht gesehen.
 - Level-geschafft: gezeichnete Sterne; alle Knöpfe/Titel verkleinern Schrift statt abzuschneiden; Stile werden zwischengespeichert.

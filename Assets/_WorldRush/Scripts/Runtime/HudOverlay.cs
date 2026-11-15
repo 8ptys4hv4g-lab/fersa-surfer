@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using WorldRush.Core;
+using WorldRush.Core.Outfits;
 
 namespace WorldRush.Runtime
 {
@@ -11,11 +12,14 @@ namespace WorldRush.Runtime
     public sealed class HudOverlay : MonoBehaviour
     {
         private GameRoot _root;
-        private GUIStyle _big, _mid, _small, _button, _panel, _field, _chip, _banner;
-        private Texture2D _panelTex, _buttonTex, _barTex, _bannerTex, _starTex;
+        private GUIStyle _big, _mid, _small, _button, _panel, _field, _chip, _banner, _levelStyle;
+        private Texture2D _panelTex, _buttonTex, _barTex, _bannerTex, _starTex, _circleTex;
         private float _scale = 1f;
         private string _outfitText;
-        private int _tab; // 0 = Start, 1 = Aufgaben, 2 = Shop, 3 = Welt, 4 = Optionen
+        private int _tab;
+        private const int TabStart = 0, TabLook = 1, TabMissions = 2, TabShop = 3, TabWorld = 4, TabSettings = 5;
+        private OutfitSpec _look;
+        private int _diceCount;
         private readonly WorldEditorPanel _worldPanel = new WorldEditorPanel();
         private bool _showCredits;
         private bool _settingsDirty;
@@ -26,7 +30,7 @@ namespace WorldRush.Runtime
         private readonly List<(string text, Color color, float time)> _popups = new List<(string, Color, float)>();
 
         private static readonly PowerUpKind[] Kinds = { PowerUpKind.Board, PowerUpKind.Magnet, PowerUpKind.Shield, PowerUpKind.Double };
-        private static readonly string[] TabKeys = { "tab.start", "tab.missions", "tab.shop", "tab.world", "tab.settings" };
+        private static readonly string[] TabKeys = { "tab.start", "tab.look", "tab.missions", "tab.shop", "tab.world", "tab.settings" };
 
         public void Init(GameRoot root)
         {
@@ -107,6 +111,7 @@ namespace WorldRush.Runtime
             _buttonTex = Solid(new Color(1f, 0.82f, 0.25f, 1f));
             _barTex = Solid(Color.white);
             _starTex = StarTexture(128);
+            _circleTex = CircleTexture(64);
             _bannerTex = Solid(new Color(0.24f, 0.91f, 1f, 0.92f));
             _big = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
             _mid = new GUIStyle(_big) { fontStyle = FontStyle.Normal, wordWrap = true };
@@ -266,7 +271,7 @@ namespace WorldRush.Runtime
             DrawStars(card.center.x, card.y + 82 * k, stars, k);
             GUI.Label(new Rect(card.x, card.y + 150 * k, card.width, 40 * k), L.T("won.stats", s.Score.Coins, s.LevelCoinsTotal, s.Tricks, s.Score.Score), _mid);
             float bw3 = (card.width - 60 * k) / 3f;
-            if (Btn(new Rect(card.x + 20 * k, card.yMax - 84 * k, bw3, 64 * k), L.T("won.next"))) _root.NextLevel();
+            if (!_root.IsCustomLevel && Btn(new Rect(card.x + 20 * k, card.yMax - 84 * k, bw3, 64 * k), L.T("won.next"))) _root.NextLevel();
             if (Btn(new Rect(card.x + 30 * k + bw3, card.yMax - 84 * k, bw3, 64 * k), L.T("over.retry"))) _root.Restart();
             if (Btn(new Rect(card.x + 40 * k + 2 * bw3, card.yMax - 84 * k, bw3, 64 * k), L.T("won.menu"))) _root.GoToMenu();
         }
@@ -277,24 +282,32 @@ namespace WorldRush.Runtime
         {
             float panelHeight = _tab switch
             {
-                1 => 400 * k,
-                2 => (160 + BoardShop.Items.Length * 64) * k,
-                3 => Mathf.Min(620 * k, Screen.height - 150 * k),
-                4 => (_showCredits ? 460 : 640) * k,
-                _ => 540 * k
+                TabLook => 560 * k,
+                TabMissions => 400 * k,
+                TabShop => (160 + BoardShop.Items.Length * 64) * k,
+                TabWorld => Mathf.Min(620 * k, Screen.height - 150 * k),
+                TabSettings => (_showCredits ? 460 : 640) * k,
+                _ => 470 * k
             };
             card.height = panelHeight;
             card.y = Mathf.Max(safe.y + 70 * k, (Screen.height - panelHeight - 70 * k) * 0.5f);
             if (Screen.width >= card.width * 2.1f) card.x = safe.x + 40 * k; // Figur bleibt rechts sichtbar
             switch (_tab)
             {
-                case 1: DrawMissions(card, k); break;
-                case 2: DrawShop(card, k); break;
-                case 3: _worldPanel.Draw(_root, card, k, _big, _mid, _small, _chip, _button, _panel, _barTex); break;
-                case 4: if (_showCredits) DrawCredits(card, k); else DrawSettings(card, k); break;
+                case TabLook: DrawLook(card, k); break;
+                case TabMissions: DrawMissions(card, k); break;
+                case TabShop: DrawShop(card, k); break;
+                case TabWorld: _worldPanel.Draw(_root, card, k, _big, _mid, _small, _chip, _button, _panel, _barTex); break;
+                case TabSettings: if (_showCredits) DrawCredits(card, k); else DrawSettings(card, k); break;
                 default: DrawStart(card, k); break;
             }
             DrawTabs(card.x, Mathf.Min(Screen.height - 58 * k, card.yMax + 10 * k), card.width, k);
+        }
+
+        private void OpenTab(int tab)
+        {
+            _tab = tab; _shopMessage = ""; _showCredits = false; _confirm = ""; _settingsMessage = "";
+            if (tab == TabLook) _look = OutfitSpec.FromText(_root.Outfit);
         }
 
         private void DrawTabs(float x, float y, float width, float k)
@@ -306,7 +319,7 @@ namespace WorldRush.Runtime
                 var prev = GUI.color;
                 if (i == _tab) GUI.color = GameRoot.NeonCyan;
                 var tabStyle = UiFit.Style(_button, (int)Mathf.Min(20 * k, w / 6.2f), null, false, null, TextClipping.Overflow);
-                if (GUI.Button(r, L.T(TabKeys[i]), tabStyle)) { _tab = i; _shopMessage = ""; _showCredits = false; _confirm = ""; _settingsMessage = ""; }
+                if (GUI.Button(r, L.T(TabKeys[i]), tabStyle)) OpenTab(i);
                 GUI.color = prev;
             }
         }
@@ -333,29 +346,149 @@ namespace WorldRush.Runtime
                 GUI.Label(new Rect(card.x, card.y + 66 * k, card.width, 26 * k), L.T("menu.customWorld"), _chip);
                 GUI.color = prev;
             }
-            GUI.Label(new Rect(card.x + 20 * k, card.y + 160 * k, card.width - 40 * k, 30 * k), L.T("menu.outfit"), _small);
-            _outfitText = GUI.TextField(new Rect(card.x + 20 * k, card.y + 194 * k, card.width - 190 * k, 44 * k), _outfitText ?? "", 200, _field);
-            if (Btn(new Rect(card.xMax - 160 * k, card.y + 194 * k, 140 * k, 44 * k), L.T("menu.wear")))
-                _outfitFeedback = _root.ApplyOutfit(_outfitText);
-            GUI.Label(new Rect(card.x + 20 * k, card.y + 246 * k, card.width - 40 * k, 50 * k), string.Join("  ·  ", _outfitFeedback), UiFit.Style(_mid, (int)(16 * k), TextAnchor.UpperLeft));
+            float lookW = Mathf.Min(300 * k, card.width - 40 * k);
+            if (Btn(new Rect(card.x + (card.width - lookW) * 0.5f, card.y + 160 * k, lookW, 50 * k), L.T("menu.changeLook"))) OpenTab(TabLook);
 
             if (_root.CharacterCount > 1)
             {
-                float ry = card.y + 300 * k;
+                float ry = card.y + 226 * k;
                 if (Btn(new Rect(card.x + 20 * k, ry, 60 * k, 44 * k), "<")) _outfitFeedback = _root.NextCharacter(-1) ?? _outfitFeedback;
                 GUI.Label(new Rect(card.x + 90 * k, ry, card.width - 180 * k, 44 * k), L.T("menu.character", _root.CharacterName), UiFit.Style(_mid, (int)(22 * k)));
                 if (Btn(new Rect(card.xMax - 80 * k, ry, 60 * k, 44 * k), ">")) _outfitFeedback = _root.NextCharacter(1) ?? _outfitFeedback;
             }
 
-            float ly = card.y + 356 * k;
-            if (_root.LevelIndex > 0 && Btn(new Rect(card.x + 20 * k, ly, 60 * k, 44 * k), "<")) _root.ChangeLevel(-1);
-            int stars = GameRoot.LevelStars(_root.LevelIndex);
-            GUI.Label(new Rect(card.x + 90 * k, ly, card.width - 180 * k, 44 * k), _root.LevelLabel + "  ·  " + L.T("menu.stars", stars), UiFit.Style(_mid, (int)(20 * k)));
+            float ly = card.y + 284 * k;
+            if (_root.CanGoPrevLevel && Btn(new Rect(card.x + 20 * k, ly, 60 * k, 44 * k), "<")) _root.ChangeLevel(-1);
+            int stars = GameRoot.LevelStars(_root.StarsIndex);
+            UiFit.Label(new Rect(card.x + 90 * k, ly, card.width - 180 * k, 44 * k), _root.LevelLabel + "  ·  " + L.T("menu.stars", stars), _levelStyle ??= new GUIStyle(_mid) { wordWrap = false });
             if (_root.CanGoNextLevel && Btn(new Rect(card.xMax - 80 * k, ly, 60 * k, 44 * k), ">")) _root.ChangeLevel(1);
 
             float bw = (card.width - 60 * k) * 0.5f;
             if (Btn(new Rect(card.x + 20 * k, card.yMax - 90 * k, bw, 66 * k), L.T("menu.play"))) _root.StartRun();
             if (Btn(new Rect(card.x + 40 * k + bw, card.yMax - 90 * k, bw, 66 * k), L.T("menu.surfPreview"))) _root.StartAtWater();
+        }
+
+        // ---------- Look (Outfit zum Antippen) ----------
+
+        private void DrawLook(Rect card, float k)
+        {
+            GUI.Box(card, GUIContent.none, _panel);
+            _look ??= OutfitSpec.FromText(_root.Outfit);
+            GUI.Label(new Rect(card.x, card.y + 10 * k, card.width, 50 * k), L.T("look.title"), UiFit.Style(_big, (int)(34 * k)));
+            float x = card.x + 20 * k, inner = card.width - 40 * k;
+            float y = card.y + 64 * k;
+
+            // Kleid oder Oberteil + Hose
+            float half = (inner - 10 * k) * 0.5f;
+            if (StyleButton(new Rect(x, y, half, 40 * k), L.T("look.styleDress"), _look.WearsDress)) { _look.WearsDress = true; ApplyLook(); }
+            if (StyleButton(new Rect(x + half + 10 * k, y, half, 40 * k), L.T("look.styleSeparates"), !_look.WearsDress)) { _look.WearsDress = false; ApplyLook(); }
+            y += 52 * k;
+
+            var slots = _look.WearsDress
+                ? new[] { OutfitSlot.Hair, OutfitSlot.Dress, OutfitSlot.Shoes }
+                : new[] { OutfitSlot.Hair, OutfitSlot.Top, OutfitSlot.Bottom, OutfitSlot.Shoes };
+            float labelW = 120 * k;
+            foreach (var slot in slots)
+            {
+                UiFit.Label(new Rect(x, y, labelW - 8 * k, 40 * k), L.T(SlotKey(slot)), _small);
+                var colors = OutfitStudio.ColorsFor(slot);
+                float avail = inner - labelW;
+                float size = Mathf.Min(36 * k, avail / colors.Length - 6 * k);
+                for (int i = 0; i < colors.Length; i++)
+                {
+                    var r = new Rect(x + labelW + i * (size + 6 * k), y + (40 * k - size) * 0.5f, size, size);
+                    if (Swatch(r, colors[i], _look.Get(slot) == colors[i], k)) { _look.Set(slot, colors[i]); ApplyLook(); }
+                }
+                y += 46 * k;
+            }
+            if (_look.WearsDress) y += 46 * k; // gleiche Höhe in beiden Varianten
+            y += 6 * k;
+
+            // Würfeln + fertige Ideen
+            float diceW = 150 * k;
+            if (Btn(new Rect(x, y, diceW, 88 * k), L.T("look.dice")))
+            {
+                _diceCount++;
+                _look = OutfitStudio.Roll(_diceCount * 7919 + (int)(Time.realtimeSinceStartup * 1000f));
+                ApplyLook();
+            }
+            float px = x + diceW + 10 * k, pw = (inner - diceW - 10 * k - 2 * 8 * k) / 3f;
+            for (int i = 0; i < OutfitStudio.Presets.Length; i++)
+            {
+                var preset = OutfitStudio.Presets[i];
+                var r = new Rect(px + (i % 3) * (pw + 8 * k), y + (i / 3) * (44 * k + 4 * k), pw, 42 * k);
+                if (Btn(r, L.T(preset.Key))) { _look = preset.Spec.Clone(); ApplyLook(); }
+            }
+            y += 100 * k;
+
+            // Eigene Worte
+            UiFit.Label(new Rect(x, y, inner, 28 * k), L.T("menu.outfit"), _small);
+            y += 30 * k;
+            _outfitText = GUI.TextField(new Rect(x, y, inner - 150 * k, 44 * k), _outfitText ?? "", 200, _field);
+            if (Btn(new Rect(card.xMax - 160 * k, y, 140 * k, 44 * k), L.T("menu.wear")))
+            {
+                _outfitFeedback = _root.ApplyOutfit(_outfitText);
+                _look = OutfitSpec.FromText(_outfitText, _look);
+                _root.OutfitSparkle();
+            }
+            y += 50 * k;
+            GUI.Label(new Rect(x, y, inner, card.yMax - y - 6 * k), string.Join("  ·  ", _outfitFeedback), UiFit.Style(_mid, (int)(16 * k), TextAnchor.UpperLeft));
+        }
+
+        private void ApplyLook()
+        {
+            _outfitText = _look.ToText(L.Current);
+            _outfitFeedback = _root.ApplyOutfit(_outfitText);
+            _root.OutfitSparkle();
+        }
+
+        private static string SlotKey(OutfitSlot slot) => slot switch
+        {
+            OutfitSlot.Hair => "look.hair",
+            OutfitSlot.Top => "look.top",
+            OutfitSlot.Bottom => "look.bottom",
+            OutfitSlot.Dress => "look.dress",
+            _ => "look.shoes"
+        };
+
+        private bool StyleButton(Rect r, string text, bool active)
+        {
+            var prev = GUI.color;
+            if (active) GUI.color = GameRoot.NeonCyan;
+            bool clicked = Btn(r, text);
+            GUI.color = prev;
+            return clicked && !active;
+        }
+
+        /// <summary>Runder Farbknopf; der gewählte hat einen weißen Ring.</summary>
+        private bool Swatch(Rect r, string colorId, bool selected, float k)
+        {
+            var prev = GUI.color;
+            if (selected)
+            {
+                GUI.color = Color.white;
+                GUI.DrawTexture(new Rect(r.x - 4 * k, r.y - 4 * k, r.width + 8 * k, r.height + 8 * k), _circleTex);
+            }
+            GUI.color = CharacterView.Palette.TryGetValue(colorId, out var c) ? c : Color.gray;
+            GUI.DrawTexture(r, _circleTex);
+            GUI.color = prev;
+            return GUI.Button(r, GUIContent.none, GUIStyle.none);
+        }
+
+        private static Texture2D CircleTexture(int size)
+        {
+            var px = new Color32[size * size];
+            float rad = size * 0.5f - 1f, c = size * 0.5f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Mathf.Sqrt((x + 0.5f - c) * (x + 0.5f - c) + (y + 0.5f - c) * (y + 0.5f - c));
+                    px[y * size + x] = new Color32(255, 255, 255, (byte)(255 * Mathf.Clamp01(rad - d + 0.5f)));
+                }
+            var t = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            t.SetPixels32(px);
+            t.Apply();
+            return t;
         }
 
         private void DrawMissions(Rect card, float k)

@@ -2,6 +2,19 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.0] – 2026-11-15
+### Hinzugefügt
+- **Eigenes Level malen:** Neuer Pinsel **Wasser** – über die Straße gemalt wird es zur **Surf-Strecke** im eigenen Level „Meine Welt“ (mit Ziel und Sternen). Die Surf-Strecken erscheinen sofort hellblau auf der Zeichenfläche. Regeln im Kern (`Core/World/WorldLevel.cs`): Start bleibt trocken, Mindestlänge 40 m, nahe Abschnitte werden zusammengelegt, Ziel bleibt frei.
+- Wasser neben der Straße wird zum **See** (antippen = runder Teich); neuer Pinsel **Hügel**.
+- **Look-Tab:** Farben für Haare, Kleid bzw. Oberteil + Hose und Schuhe **antippen**, **Würfeln** (stimmige Zufalls-Looks), 6 fertige Ideen (Meerjungfrau, Superheldin, Neon-Surferin, Sonnenschein, Prinzessin, Galaxie), Eintippen bleibt möglich. Glitzer an der Figur bei jedem neuen Look.
+- Neue Farbe **Türkis**; richtige deutsche Endungen („rotes Kleid“, „rote Hose“) im Kern (`Core/Outfits/OutfitStudio.cs`).
+- 21 neue Tests (u. a. gemaltes Level bis ins Ziel durchgespielt; jeder antippbare Look wird vom Text-Erkenner wieder verstanden – Deutsch und Englisch).
+### Geändert
+- Outfit wird **gespeichert** und beim nächsten Start wieder angezogen.
+- Gewählte Farben werden wirklich verwendet (vorher oft durch eine „Ersatz“-Farbe ersetzt). Modell ohne Kleid: Kleid-Farbe färbt Oberteil + Hose.
+- Outfit-Rückmeldungen auf Deutsch und Englisch; Material-Namen der Figur stehen im Unity-Protokoll (Diagnose).
+- Startmenü aufgeräumt: Knopf „Look ändern“ statt Textfeld.
+
 ## [0.4.4] – 2026-11-15
 ### Hinzugefügt
 - **Automatisch aktualisieren in Unity** (`Editor/AutoUpdate.cs`): Unity holt neue Versionen alle 2 Minuten selbst von GitHub (nicht während ▶), lädt neu und meldet „Fesara: neue Version geladen“. Keine PowerShell-Befehle mehr. Menü „Fesara → 0. Neueste Version jetzt holen“, abschaltbar über „Fesara → Automatisch aktualisieren“. Geht nur vorwärts; eigene Modelle (Figur, Stadt) bleiben unberührt (getestet an einer Kopie).

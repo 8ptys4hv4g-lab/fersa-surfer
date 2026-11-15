@@ -125,6 +125,7 @@ namespace WorldRush.Runtime
             ApplySettings();
             LoadCustomWorld();
 
+            outfit = PlayerPrefs.GetString(OutfitKey, outfit);
             _hud = gameObject.AddComponent<HudOverlay>();
             _hud.Init(this);
             ApplyOutfit(outfit);
@@ -162,10 +163,23 @@ namespace WorldRush.Runtime
 
         public void TogglePause() => _session.TogglePause();
 
+        private const string OutfitKey = "fs-outfit";
+
+        /// <summary>Aktueller Outfit-Text (wird gespeichert und beim nächsten Start wieder angezogen).</summary>
+        public string Outfit => outfit;
+
         public List<string> ApplyOutfit(string text)
         {
             outfit = text ?? "";
+            if (outfit.Length > Core.Outfits.OutfitTextParser.MaxInputLength) outfit = outfit.Substring(0, Core.Outfits.OutfitTextParser.MaxInputLength);
+            PlayerPrefs.SetString(OutfitKey, outfit);
             return _character.ApplyOutfit(outfit);
+        }
+
+        /// <summary>Kleiner Glitzer-Effekt an der Figur (z. B. nach neuem Look).</summary>
+        public void OutfitSparkle()
+        {
+            if (_player != null) Burst(_player.position + Vector3.up * 1.2f, NeonPink, 36);
         }
 
         private void Update()
@@ -307,13 +321,40 @@ namespace WorldRush.Runtime
                 }
                 _customScenery.Add(go.transform);
             }
+            foreach (var lake in plan.WaterAreas) BuildLake(lake);
             CustomWorldActive = true;
             PlayerPrefs.SetInt(CustomWorldKey, 1);
+            // Gemaltes Wasser über der Straße = Surf-Strecken im eigenen Level (mit Ziel und Sternen)
+            var level = WorldLevel.Create(def.Strokes, L.T("world.levelName"));
+            if (save) PlayerPrefs.DeleteKey("fs-stars-" + WorldLevel.CustomIndex);
+            ClearViews();
+            _session.SetLevel(level);
+            BuildLevelView();
             if (save) { try { _worlds?.Save(def); } catch (System.Exception e) { Debug.LogWarning("[Fesara] Welt speichern fehlgeschlagen: " + e.Message); } }
             Debug.Log($"[Fesara] Eigene Welt gebaut: {plan.Objects.Count} Objekte. " + string.Join(" | ", plan.Warnings));
-            var notes = new List<string>();
-            foreach (var w in plan.Warnings) if (!w.Contains("Straße")) notes.Add(w); // Straßen-Hinweis ist hier normal (Laufstrecke ist fest)
+            var notes = new List<string> { L.T("world.surfCount", level.Water.Count) };
+            if (L.Current == Language.German)
+                foreach (var w in plan.Warnings) if (!w.Contains("Straße")) notes.Add(w); // Straßen-Hinweis ist hier normal (Laufstrecke ist fest)
             return notes;
+        }
+
+        /// <summary>See aus einem gemalten Umriss: flache Wasserfläche mit hellem Rand.</summary>
+        private void BuildLake(List<Vec2> outline)
+        {
+            if (outline == null || outline.Count == 0) return;
+            Geometry.Bounds(outline, out var min, out var max);
+            float w = Mathf.Clamp(max.X - min.X, 6f, 60f), d = Mathf.Clamp(max.Y - min.Y, 6f, 80f);
+            var center = new Vector3((min.X + max.X) * 0.5f, 0f, (min.Y + max.Y) * 0.5f);
+            var lake = new GameObject("Lake").transform;
+            lake.SetParent(transform);
+            lake.position = center;
+            var rim = MakePrimitive(PrimitiveType.Cylinder, "LakeRim", lake, _foamMat);
+            rim.transform.localPosition = new Vector3(0f, -0.005f, 0f);
+            rim.transform.localScale = new Vector3(w + 1.2f, 0.015f, d + 1.2f);
+            var water = MakePrimitive(PrimitiveType.Cylinder, "LakeWater", lake, _waterMat);
+            water.transform.localPosition = new Vector3(0f, 0.01f, 0f);
+            water.transform.localScale = new Vector3(w, 0.02f, d);
+            _customScenery.Add(lake);
         }
 
         /// <summary>Standard-Stadt zurück und eigene Welt löschen.</summary>
@@ -345,6 +386,7 @@ namespace WorldRush.Runtime
             foreach (var t in _scenery) t.gameObject.SetActive(true);
             CustomWorldActive = false;
             PlayerPrefs.SetInt(CustomWorldKey, 0);
+            if (IsCustomLevel) SetLevel(_levelIndex);
         }
 
         private void ClearCustomWorld()
@@ -515,7 +557,8 @@ namespace WorldRush.Runtime
             if (state == GameState.Won)
             {
                 int stars = _session.Stars;
-                if (stars > LevelStars(_levelIndex)) PlayerPrefs.SetInt("fs-stars-" + _levelIndex, stars);
+                int starIndex = StarsIndex;
+                if (stars > LevelStars(starIndex)) PlayerPrefs.SetInt("fs-stars-" + starIndex, stars);
                 PlayerPrefs.Save();
                 _music.Stop();
                 _sfx.PlayOneShot(_powerClip, 1f);
@@ -1159,15 +1202,21 @@ namespace WorldRush.Runtime
         private readonly List<(Mesh mesh, Vector3[] baseVertices, Vector3[] buffer, Transform transform)> _waters = new List<(Mesh, Vector3[], Vector3[], Transform)>();
 
         public int LevelIndex => _levelIndex;
-        public string LevelLabel => L.T("menu.level", _levelIndex + 1, _session.Level?.Name);
+        public string LevelLabel => IsCustomLevel ? L.T("menu.customLevel") : L.T("menu.level", _levelIndex + 1, _session.Level?.Name);
+        /// <summary>Spielt gerade das selbst gemalte Level?</summary>
+        public bool IsCustomLevel => _session.Level != null && _session.Level.Index == WorldLevel.CustomIndex;
+        /// <summary>Unter dieser Nummer werden die Sterne des aktuellen Levels gespeichert.</summary>
+        public int StarsIndex => _session.Level?.Index ?? _levelIndex;
+        public bool CanGoPrevLevel => !IsCustomLevel && _levelIndex > 0;
         public static int LevelStars(int index) => PlayerPrefs.GetInt("fs-stars-" + index, 0);
         public static int UnlockedLevels { get { int u = 0; while (LevelStars(u) > 0 && u < 999) u++; return u; } }
-        public bool CanGoNextLevel => _levelIndex < UnlockedLevels;
+        public bool CanGoNextLevel => !IsCustomLevel && _levelIndex < UnlockedLevels;
 
         public static float WaveHeight(float z, float x, float t) => 0.16f * Mathf.Sin(z * 0.32f + t * 2.2f) + 0.07f * Mathf.Sin(x * 0.6f + t * 3.1f);
 
         public void ChangeLevel(int direction)
         {
+            if (IsCustomLevel) return;
             int target = Mathf.Clamp(_levelIndex + direction, 0, UnlockedLevels);
             if (target == _levelIndex) return;
             SetLevel(target);
@@ -1185,6 +1234,7 @@ namespace WorldRush.Runtime
 
         public void NextLevel()
         {
+            if (IsCustomLevel) { Restart(); return; }
             SetLevel(Mathf.Min(_levelIndex + 1, UnlockedLevels));
             _session.Start();
         }
