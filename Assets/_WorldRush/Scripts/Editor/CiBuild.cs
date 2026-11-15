@@ -24,6 +24,7 @@ namespace WorldRush.EditorTools
             PlayerSettings.productName = ProductInfo.DisplayName;
             PlayerSettings.bundleVersion = ProductInfo.Version;
             PlayerSettings.companyName = "Fesara";
+            ShaderIncludes.EnsureAll();
 
             // Linux-Build-Server können Windows nur mit Mono bauen; Android/WebGL nutzen IL2CPP.
             var backend = target == BuildTarget.StandaloneWindows64 || target == BuildTarget.StandaloneLinux64

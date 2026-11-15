@@ -2,6 +2,12 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
+## [0.4.2] – 2026-11-15
+### Hinzugefügt
+- **Gemalter Himmel** statt einfarbigem Lila: Verlauf vom Horizont über Abendrot zum dunkleren Zenit, weiche Wolkenstreifen, Sonne (auch im Startmenü sichtbar), nachts Mond und Sterne. Wechselt mit den 4 Himmelsfarben beim Laufen. Per Code gemalt (`Core/Visuals/SkyPainter.cs`), Neumalen in kleinen Stücken ohne Ruckeln.
+- Build-Menüs tragen den Himmel-Shader automatisch in „Always Included Shaders“ ein (`ShaderIncludes.cs`). Fehlt er, bleibt der alte einfarbige Himmel.
+- 5 Tests für den Himmel (Horizont = Nebelfarbe, Sonne in beide Richtungen, Mond nachts, Stück-für-Stück-Malen gleich).
+
 ## [0.4.1] – 2026-11-15
 ### Geändert
 - **Neuer Name: „Fesara – Run & Surf“** (vorher „Fersa Wave“; Grund: „FERSA“ ist eine fremde Marke). Name unter dem Icon: „Fesara“, Untertitel englisch „Run & Surf“.

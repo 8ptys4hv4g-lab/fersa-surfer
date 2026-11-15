@@ -2,6 +2,10 @@
 
 **Stand:** 2026-11-14 · Version 0.2.0 · **M0 + M1 ✅ in Unity bestätigt** · M2/M7 in Arbeit
 
+## Stand 15.11.2026 · Version 0.4.2 · Gemalter Himmel
+- Himmel mit Verlauf, Wolken, Sonne/Mond, Sternen (Skybox „Panoramic“ + eigenes Bild per Code). Startmenü: Figur rechts neben der Karte.
+- Getestet: 140 Kern-Tests ✅, Unity-Kompilierprüfung ✅, Himmel als Vorschaubild gerendert und angeschaut ✅. **Nicht** in Unity gesehen: wie Himmel und Stadt zusammen wirken.
+
 ## Stand 15.11.2026 · Version 0.4.1 · Neuer Name + Logo
 - Name **„Fesara – Run & Surf“**, Logo „Platsch-Welle“ (eigenes Motiv, per Code). Prüfung: `docs/store/RECHTS_UND_SICHERHEITSPRUEFUNG.md`, Abschnitt 3.
 - Getestet: 135 Kern-Tests ✅, Unity-Kompilierprüfung ✅ (nur bekannte, neuere API-Fehler). Icon und Titelbild als Bild erzeugt und angeschaut ✅. **Nicht** in Unity selbst geprüft: Startmenü-Schriftzug, Menü „Fesara → 6.“.

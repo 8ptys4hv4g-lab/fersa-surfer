@@ -60,6 +60,7 @@ namespace WorldRush.EditorTools
             }
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.insecureHttpOption = InsecureHttpOption.NotAllowed;
+            ShaderIncludes.EnsureAll();
             Debug.Log("[Fesara] Build-Einstellungen gesetzt: IL2CPP, Code-Stripping, nur HTTPS, Android ARM64.");
         }
 

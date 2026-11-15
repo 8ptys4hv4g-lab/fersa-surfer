@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using WorldRush.Core;
+using WorldRush.Core.Visuals;
 using WorldRush.Core.World;
 
 namespace WorldRush.Runtime
@@ -44,6 +45,12 @@ namespace WorldRush.Runtime
         private AudioSource _sfx, _music;
         private AudioClip _coinClip, _jumpClip, _slideClip, _powerClip, _crashClip;
         private Material _skyMaterial;
+        // Gemalter Himmel (Rundum-Bild). Wird bei Farbwechsel in kleinen Stücken neu gemalt, damit nichts ruckelt.
+        private const int SkyWidth = 512, SkyHeight = 256, SkyRowsPerFrame = 24;
+        private Texture2D _skyTex;
+        private byte[] _skyBuf;
+        private int _skyKey = -1, _skyRow = -1;
+        private SkyColor _skyTint, _skyFog;
         private Transform _sunDisk;
         private Material _sunMat;
         private bool _kitBuildings;
@@ -804,14 +811,8 @@ namespace WorldRush.Runtime
             RenderSettings.fogEndDistance = 230f;
 
             RenderSettings.skybox = null;
-            _sunDisk = GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
-            _sunDisk.name = "SunDisk";
-            Destroy(_sunDisk.GetComponent<Collider>());
-            _sunDisk.SetParent(transform, false);
-            _sunDisk.localScale = Vector3.one * 34f;
-            _sunMat = MaterialFactory.Create(new Color(1f, 0.75f, 0.45f), 0f, new Color(1f, 0.6f, 0.35f) * 2.2f);
-            _sunDisk.GetComponent<Renderer>().sharedMaterial = _sunMat;
-            _sunDisk.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+            CreatePaintedSky();
+            if (_skyMaterial == null) CreateSunDisk();
 
             // Leuchten (Bloom) und kräftige Farben über ein globales URP-Volume
             if (GraphicsSettings.currentRenderPipeline != null)
@@ -853,6 +854,81 @@ namespace WorldRush.Runtime
             }
         }
 
+        private void CreateSunDisk()
+        {
+            _sunDisk = GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
+            _sunDisk.name = "SunDisk";
+            Destroy(_sunDisk.GetComponent<Collider>());
+            _sunDisk.SetParent(transform, false);
+            _sunDisk.localScale = Vector3.one * 34f;
+            _sunMat = MaterialFactory.Create(new Color(1f, 0.75f, 0.45f), 0f, new Color(1f, 0.6f, 0.35f) * 2.2f);
+            _sunDisk.GetComponent<Renderer>().sharedMaterial = _sunMat;
+            _sunDisk.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+        }
+
+        /// <summary>Himmel als gemaltes Rundum-Bild (Skybox "Panoramic"). Fehlt der Shader, bleibt die einfarbige Variante.</summary>
+        private void CreatePaintedSky()
+        {
+            var shader = Shader.Find("Skybox/Panoramic");
+            if (shader == null) { Debug.LogWarning("[Fesara] Himmel-Shader fehlt – einfarbiger Himmel wird verwendet."); return; }
+            _skyTex = new Texture2D(SkyWidth, SkyHeight, TextureFormat.RGBA32, false)
+            {
+                name = "FesaraSky",
+                wrapModeU = TextureWrapMode.Repeat,
+                wrapModeV = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+            _skyBuf = new byte[SkyWidth * SkyHeight * 4];
+            _skyMaterial = new Material(shader) { name = "FesaraSky" };
+            _skyMaterial.SetTexture("_MainTex", _skyTex);
+            _skyMaterial.SetColor("_Tint", new Color(0.5f, 0.5f, 0.5f, 0.5f));
+            _skyMaterial.SetFloat("_Exposure", 1f);
+            _skyMaterial.SetFloat("_Rotation", 0f);
+            _skyMaterial.SetFloat("_Mapping", 1f);      // Breite = 360°, Höhe = 180°
+            _skyMaterial.SetFloat("_ImageType", 0f);    // 360°-Bild
+            _skyMaterial.DisableKeyword("_MAPPING_6_FRAMES_LAYOUT");
+            _skyMaterial.EnableKeyword("_MAPPING_LATITUDE_LONGITUDE_LAYOUT");
+            RenderSettings.skybox = _skyMaterial;
+        }
+
+        private void UpdatePaintedSky(Color tint, Color fog, int key)
+        {
+            if (_skyMaterial == null) return;
+            if (_skyKey < 0)
+            {
+                // Erstes Bild sofort komplett malen, damit der Himmel nie leer ist.
+                _skyKey = key;
+                SkyPainter.PaintRows(_skyBuf, SkyWidth, SkyHeight, 0, SkyHeight, ToSky(tint), ToSky(fog));
+                UploadSky();
+                return;
+            }
+            if (_skyRow < 0 && key != _skyKey)
+            {
+                _skyKey = key; _skyRow = 0;
+                _skyTint = ToSky(tint); _skyFog = ToSky(fog);
+            }
+            if (_skyRow < 0) return;
+            int to = Mathf.Min(SkyHeight, _skyRow + SkyRowsPerFrame);
+            SkyPainter.PaintRows(_skyBuf, SkyWidth, SkyHeight, _skyRow, to, _skyTint, _skyFog);
+            _skyRow = to;
+            if (_skyRow >= SkyHeight) { UploadSky(); _skyRow = -1; }
+        }
+
+        private void UploadSky()
+        {
+            _skyTex.LoadRawTextureData(_skyBuf);
+            _skyTex.Apply(false);
+        }
+
+        private static SkyColor ToSky(Color c) => new SkyColor(c.r, c.g, c.b);
+
+        private void OnDestroy()
+        {
+            if (RenderSettings.skybox == _skyMaterial) RenderSettings.skybox = null;
+            if (_skyMaterial != null) Destroy(_skyMaterial);
+            if (_skyTex != null) Destroy(_skyTex);
+        }
+
         private static readonly Color[][] Skies =
         {
             new[] { new Color(0.75f, 0.35f, 0.85f), new Color(0.42f, 0.25f, 0.63f), new Color(0.55f, 0.6f, 1f) },  // Sonnenuntergang
@@ -870,7 +946,7 @@ namespace WorldRush.Runtime
             var a = Skies[i];
             var b = Skies[(i + 1) % Skies.Length];
             Color tint = Color.Lerp(a[0], b[0], t), fog = Color.Lerp(a[1], b[1], t), amb = Color.Lerp(a[2], b[2], t);
-            if (_skyMaterial != null) _skyMaterial.SetColor("_SkyTint", tint);
+            UpdatePaintedSky(tint, fog, i * 100 + Mathf.RoundToInt(t * 12f));
             RenderSettings.fogColor = fog;
             RenderSettings.ambientSkyColor = amb;
             RenderSettings.ambientEquatorColor = Color.Lerp(amb, fog, 0.5f);

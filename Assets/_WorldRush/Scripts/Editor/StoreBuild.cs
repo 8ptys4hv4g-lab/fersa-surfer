@@ -41,6 +41,7 @@ namespace WorldRush.EditorTools
             PlayerSettings.bundleVersion = ProductInfo.Version;
             if (icon != null) PlayerSettings.SetIcons(NamedBuildTarget.Unknown, new[] { icon }, IconKind.Any);
             PlayerSettings.SplashScreen.show = false;
+            ShaderIncludes.EnsureAll();
 
             // 3) Querformat (Runner)
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
@@ -93,6 +94,7 @@ namespace WorldRush.EditorTools
             EditorUserBuildSettings.buildAppBundle = true;
             Directory.CreateDirectory("Builds/Android");
             string path = $"Builds/Android/Fesara-{ProductInfo.Version}.aab";
+            ShaderIncludes.EnsureAll();
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = scenes.ToArray(), locationPathName = path, target = BuildTarget.Android, options = BuildOptions.None });
             bool ok = report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded;
             string text = ok
@@ -120,6 +122,7 @@ namespace WorldRush.EditorTools
             string dir = "Builds/Web";
             if (Directory.Exists(dir)) Directory.Delete(dir, true);
             Directory.CreateDirectory(dir);
+            ShaderIncludes.EnsureAll();
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = scenes.ToArray(), locationPathName = dir, target = BuildTarget.WebGL, options = BuildOptions.None });
             bool ok = report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded;
             string zip = $"Builds/Fesara-Web-{ProductInfo.Version}.zip";
