@@ -168,7 +168,8 @@ namespace WorldRush.Runtime
                     var titleStyle = new GUIStyle(_big);
                     titleStyle.normal.textColor = GameRoot.NeonCyan;
                     GUI.Label(new Rect(card.x, card.y + 16 * k, card.width, 70 * k), ProductInfo.DisplayName, titleStyle);
-                    GUI.Label(new Rect(card.x + 20 * k, card.y + 90 * k, card.width - 40 * k, 60 * k), "Pfeiltasten oder Wischen: ← → Spur · ↑ Springen · ↓ Rutschen", _mid);
+                    GUI.Label(new Rect(card.x + 20 * k, card.y + 90 * k, card.width - 40 * k, 60 * k),
+                        string.IsNullOrEmpty(_root.LastRunText) ? "Pfeiltasten oder Wischen: ← → Spur · ↑ Springen · ↓ Rutschen" : _root.LastRunText, _mid);
                     GUI.Label(new Rect(card.x + 20 * k, card.y + 160 * k, card.width - 40 * k, 30 * k), "Dein Outfit, in eigenen Worten:", _small);
                     _outfitText = GUI.TextField(new Rect(card.x + 20 * k, card.y + 194 * k, card.width - 190 * k, 44 * k), _outfitText ?? "", 200, _field);
                     if (GUI.Button(new Rect(card.xMax - 160 * k, card.y + 194 * k, 140 * k, 44 * k), "Anziehen", _button))
@@ -209,8 +210,10 @@ namespace WorldRush.Runtime
                     starStyle.normal.textColor = GameRoot.Sun;
                     GUI.Label(new Rect(card.x, card.y + 82 * k, card.width, 60 * k), new string('*', stars) + new string('-', 3 - stars), starStyle);
                     GUI.Label(new Rect(card.x, card.y + 150 * k, card.width, 40 * k), $"{s.Score.Coins}/{s.LevelCoinsTotal} Münzen  ·  {s.Tricks} Saltos  ·  {s.Score.Score} Punkte", _mid);
-                    if (GUI.Button(new Rect(card.x + 20 * k, card.yMax - 84 * k, card.width * 0.5f - 30 * k, 64 * k), "Nächstes Level", _button)) _root.NextLevel();
-                    if (GUI.Button(new Rect(card.x + card.width * 0.5f + 10 * k, card.yMax - 84 * k, card.width * 0.5f - 30 * k, 64 * k), "Nochmal", _button)) _root.Restart();
+                    float bw3 = (card.width - 60 * k) / 3f;
+                    if (GUI.Button(new Rect(card.x + 20 * k, card.yMax - 84 * k, bw3, 64 * k), "Nächstes Level", _button)) _root.NextLevel();
+                    if (GUI.Button(new Rect(card.x + 30 * k + bw3, card.yMax - 84 * k, bw3, 64 * k), "Nochmal", _button)) _root.Restart();
+                    if (GUI.Button(new Rect(card.x + 40 * k + 2 * bw3, card.yMax - 84 * k, bw3, 64 * k), "Menü", _button)) _root.GoToMenu();
                     break;
                 case GameState.GameOver:
                     card.height = 280 * k;

@@ -3,6 +3,8 @@
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionen nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
+### Geändert
+- Nach einem Aufprall: Ergebnis 2 s zeigen, dann zurück ins Startmenü (kein automatischer Neustart). Start nur per Knopf oder Enter. Sieg-Bildschirm mit „Menü“-Knopf.
 ### Hinzugefügt
 - Tägliche Aufgaben (3 pro Tag, Belohnung in Münzen), Münz-Konto, Surfbrett-Shop (6 Bretter, nur Spiel-Münzen, rein kosmetisch), Tabs Start/Aufgaben/Shop; Zähler für Sprünge, Rutschen, Power-ups (10 neue Tests, 125 gesamt).
 

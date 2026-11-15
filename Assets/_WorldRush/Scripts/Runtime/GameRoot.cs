@@ -120,6 +120,23 @@ namespace WorldRush.Runtime
             if (autoStart) _session.Start();
         }
 
+        private float _gameOverSince, _menuSince;
+
+        /// <summary>Text "Letzte Runde: …" fürs Startmenü (leer beim ersten Start).</summary>
+        public string LastRunText { get; private set; } = "";
+
+        private static bool EnterPressed() => Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+
+        /// <summary>Zurück ins Startmenü (wie ganz am Anfang).</summary>
+        public void GoToMenu()
+        {
+            if (_session.State == GameState.GameOver || _session.State == GameState.Won)
+                LastRunText = $"Letzte Runde: {(int)_session.Score.Distance} m · {_session.Score.Coins} Münzen · {_session.Score.Score} Punkte";
+            ClearViews();
+            _session.ReturnToReady();
+            _menuSince = Time.unscaledTime;
+        }
+
         public void StartRun()
         {
             if (_session.State == GameState.Ready) _session.Start();
@@ -147,14 +164,12 @@ namespace WorldRush.Runtime
             switch (_session.State)
             {
                 case GameState.Ready:
-                    // Nicht starten, während jemand ins Outfit-Feld tippt.
-                    if (GUIUtility.keyboardControl == 0 && (_input.ConfirmPressed || commands.Count > 0)) _session.Start();
+                    // Nur Enter startet (nicht Leertaste/Pfeile) – und nicht direkt nach dem Wechsel ins Menü oder beim Tippen.
+                    if (GUIUtility.keyboardControl == 0 && Time.unscaledTime - _menuSince > 0.8f && EnterPressed()) _session.Start();
                     break;
                 case GameState.GameOver:
-                    if (_input.ConfirmPressed) Restart();
-                    break;
-                case GameState.Won:
-                    if (_input.ConfirmPressed) NextLevel();
+                    // Ergebnis kurz zeigen, dann zurück ins Startmenü – kein automatischer Neustart.
+                    if (Time.unscaledTime - _gameOverSince > 2.2f) GoToMenu();
                     break;
                 case GameState.Running:
                     foreach (var c in commands)
@@ -226,6 +241,8 @@ namespace WorldRush.Runtime
 
         private void OnStateChanged(GameState state)
         {
+            if (state == GameState.GameOver) _gameOverSince = Time.unscaledTime;
+            if (state == GameState.Ready) _menuSince = Time.unscaledTime;
             if (state == GameState.Running && _session.Score.Coins == 0) _bankedCoins = 0; // neue Runde
             if (state == GameState.Running && !_music.isPlaying) _music.Play();
             if (state == GameState.Won)
