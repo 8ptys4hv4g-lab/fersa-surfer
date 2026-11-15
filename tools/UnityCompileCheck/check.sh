@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Kompiliert die Unity-Skripte (Runtime + Editor) ohne Unity – gegen öffentliche Referenz-Bibliotheken von NuGet.
 # Findet Tipp- und API-Fehler, bevor jemand Unity öffnen muss. Ersetzt keinen echten Test in Unity.
-# Hinweis: Die Referenzen sind Unity 2021. Fehler zu neueren APIs (NamedBuildTarget, insecureHttpOption) sind erwartet.
+# Hinweis: Die Referenzen sind Unity 2021. Fehler zu neueren APIs (NamedBuildTarget, insecureHttpOption, SetIcons) sind erwartet.
 set -euo pipefail
 cd "$(dirname "$0")"
 REF=.ref
@@ -23,4 +23,4 @@ MODS=$(dirname "$(find $REF/mods -name UnityEngine.CoreModule.dll | head -1)")
   echo "<Reference Include=\"UnityEditor\"><HintPath>$REF/sdk/lib/UnityEditor.dll</HintPath></Reference>"
   echo '</ItemGroup></Project>'
 } > UnityCompileCheck.csproj
-dotnet build -nologo -v q 2>&1 | grep -E "error|Error\(s\)" | grep -vE "NamedBuildTarget|insecureHttpOption|InsecureHttpOption" | sed 's#.*/Scripts/##' | sort -u || true
+dotnet build -nologo -v q 2>&1 | grep -E "error|Error\(s\)" | grep -vE "NamedBuildTarget|insecureHttpOption|InsecureHttpOption|SetIcons" | sed 's#.*/Scripts/##' | sort -u || true
