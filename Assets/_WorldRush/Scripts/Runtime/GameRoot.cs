@@ -79,6 +79,7 @@ namespace WorldRush.Runtime
 
             _saveRepo = new LocalSaveRepository(Path.Combine(Application.persistentDataPath, ProductInfo.SaveFileName));
             _save = _saveRepo.Load();
+            _missions = MissionBoard.Load(MissionBoard.SetIdForDate(System.DateTime.UtcNow), _save);
 
             int startSeed = seed != 0 ? seed : System.Environment.TickCount;
             _levelIndex = Mathf.Clamp(PlayerPrefs.GetInt("fs-level", 0), 0, UnlockedLevels);
@@ -210,6 +211,13 @@ namespace WorldRush.Runtime
             if (state != GameState.GameOver && state != GameState.Won) return;
             _save.RunsPlayed++;
             _save.TotalCoins += _session.Score.Coins;
+            _save.Wallet += _session.Score.Coins;
+            foreach (var m in _missions.ApplyRun(RunStats.From(_session)))
+            {
+                _save.Wallet += m.Reward;
+                _hud?.Popup($"Aufgabe geschafft! +{m.Reward} Münzen", Sun);
+            }
+            _missions.Store(_save);
             _save.HighScore = Mathf.Max(_save.HighScore, _session.Score.HighScore);
             try { _saveRepo.Save(_save); }
             catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] Speichern fehlgeschlagen: " + e.Message); }
@@ -841,6 +849,32 @@ namespace WorldRush.Runtime
             return tex;
         }
 
+        private MissionBoard _missions;
+        public IReadOnlyList<Mission> Missions => _missions.Missions;
+        public int Wallet => _save.Wallet;
+        public int SelectedBoard => _save.SelectedBoard;
+        public bool OwnsBoard(int id) => BoardShop.Owns(_save, id);
+
+        public BoardShop.BuyResult BuyBoard(int id)
+        {
+            var result = BoardShop.TryBuy(_save, id);
+            if (result == BoardShop.BuyResult.Bought) { ApplyBoardColor(); SaveNow(); _sfx.PlayOneShot(_powerClip, 0.8f); }
+            return result;
+        }
+
+        public void SelectBoard(int id)
+        {
+            if (BoardShop.Select(_save, id)) { ApplyBoardColor(); SaveNow(); }
+        }
+
+        private void ApplyBoardColor() => _character.SetBoardColor(CharacterView.Hex(BoardShop.Get(_save.SelectedBoard).ColorHex));
+
+        private void SaveNow()
+        {
+            try { _saveRepo.Save(_save); }
+            catch (System.Exception e) { Debug.LogWarning("[FersaSurfer] Speichern fehlgeschlagen: " + e.Message); }
+        }
+
         private List<GameObject> _models = new List<GameObject>();
         private int _modelIndex;
 
@@ -855,6 +889,7 @@ namespace WorldRush.Runtime
             string saved = PlayerPrefs.GetString("fs-character", "");
             _modelIndex = Mathf.Max(0, _models.FindIndex(m => m.name == saved));
             _character = new CharacterView(_player, _models.Count > 0 ? _models[_modelIndex] : null);
+            ApplyBoardColor();
         }
 
         /// <summary>Nächste/vorherige Figur auswählen (Startmenü).</summary>
@@ -865,6 +900,7 @@ namespace WorldRush.Runtime
             PlayerPrefs.SetString("fs-character", _models[_modelIndex].name);
             Destroy(_character.Root.gameObject);
             _character = new CharacterView(_player, _models[_modelIndex]);
+            ApplyBoardColor();
             return ApplyOutfit(outfit);
         }
 

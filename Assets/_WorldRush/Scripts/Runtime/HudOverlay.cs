@@ -15,6 +15,8 @@ namespace WorldRush.Runtime
         private Texture2D _panelTex, _buttonTex, _barTex;
         private float _scale = 1f;
         private string _outfitText;
+        private int _tab; // 0 = Start, 1 = Aufgaben, 2 = Shop
+        private string _shopMessage = "";
         private List<string> _outfitFeedback = new List<string>();
         private readonly List<(string text, Color color, float time)> _popups = new List<(string, Color, float)>();
 
@@ -148,6 +150,15 @@ namespace WorldRush.Runtime
             // Menüs
             float cw = Mathf.Min(Screen.width - 2 * pad, 560 * k);
             var card = new Rect((Screen.width - cw) * 0.5f, 0, cw, 0);
+            if (s.State == GameState.Ready && _tab != 0)
+            {
+                card.y = Mathf.Max(80 * k, safe.y + 70 * k);
+                if (_tab == 1) DrawMissions(card, k); else DrawShop(card, k);
+                float panelHeight = (_tab == 1 ? 400 : 140 + BoardShop.Items.Length * 64) * k;
+                DrawTabs(card.x, Mathf.Min(Screen.height - 60 * k, card.y + panelHeight + 12 * k), card.width, k);
+                return;
+            }
+
             switch (s.State)
             {
                 case GameState.Ready:
@@ -177,6 +188,7 @@ namespace WorldRush.Runtime
                         GUI.Label(new Rect(card.x + 90 * k, ry, card.width - 180 * k, 44 * k), "Figur: " + _root.CharacterName, new GUIStyle(_mid) { fontSize = (int)(22 * k) });
                         if (GUI.Button(new Rect(card.xMax - 80 * k, ry, 60 * k, 44 * k), ">", _button)) _outfitFeedback = _root.NextCharacter(1) ?? _outfitFeedback;
                     }
+                    DrawTabs(card.x, card.yMax + 12 * k, card.width, k);
                     if (GUI.Button(new Rect(card.x + card.width * 0.5f - 270 * k, card.yMax - 90 * k, 250 * k, 66 * k), "Spielen", _button)) _root.StartRun();
                     if (GUI.Button(new Rect(card.x + card.width * 0.5f + 20 * k, card.yMax - 90 * k, 250 * k, 66 * k), "Surfen ansehen", _button)) _root.StartAtWater();
                     break;
@@ -208,6 +220,71 @@ namespace WorldRush.Runtime
                     GUI.Label(new Rect(card.x, card.y + 100 * k, card.width, 40 * k), $"{(int)s.Score.Distance} m  ·  {s.Score.Coins} Münzen  ·  {s.Score.Score} Punkte", _mid);
                     if (GUI.Button(new Rect(card.x + (card.width - 240 * k) * 0.5f, card.yMax - 90 * k, 240 * k, 64 * k), "Nochmal", _button)) _root.Restart();
                     break;
+            }
+        }
+
+        private void DrawTabs(float x, float y, float width, float k)
+        {
+            string[] names = { "Start", "Aufgaben", "Shop" };
+            float w = (width - 20 * k) / 3f;
+            for (int i = 0; i < 3; i++)
+            {
+                var r = new Rect(x + i * (w + 10 * k), y, w, 48 * k);
+                var prev = GUI.color;
+                if (i == _tab) GUI.color = GameRoot.NeonCyan;
+                if (GUI.Button(r, names[i], _button)) { _tab = i; _shopMessage = ""; }
+                GUI.color = prev;
+            }
+        }
+
+        private void DrawMissions(Rect card, float k)
+        {
+            card.height = 400 * k;
+            GUI.Box(card, GUIContent.none, _panel);
+            GUI.Label(new Rect(card.x, card.y + 14 * k, card.width, 50 * k), "Aufgaben für heute", new GUIStyle(_big) { fontSize = (int)(34 * k) });
+            GUI.Label(new Rect(card.x, card.y + 64 * k, card.width, 30 * k), $"Dein Konto: {_root.Wallet} Münzen", _mid);
+            float y = card.y + 110 * k;
+            foreach (var m in _root.Missions)
+            {
+                GUI.Label(new Rect(card.x + 24 * k, y, card.width - 48 * k, 30 * k), m.Title, _small);
+                float frac = Mathf.Clamp01(m.Progress / (float)m.Target);
+                var bar = new Rect(card.x + 24 * k, y + 36 * k, card.width - 220 * k, 12 * k);
+                var prev = GUI.color;
+                GUI.color = new Color(1f, 1f, 1f, 0.2f);
+                GUI.DrawTexture(bar, _barTex);
+                GUI.color = m.Completed ? new Color(0.45f, 1f, 0.6f) : GameRoot.Sun;
+                GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * frac, bar.height), _barTex);
+                GUI.color = prev;
+                string state = m.Completed ? "Geschafft!" : $"{m.Progress}/{m.Target}  ·  +{m.Reward}";
+                GUI.Label(new Rect(bar.xMax + 12 * k, y + 26 * k, 180 * k, 30 * k), state, _chip);
+                y += 90 * k;
+            }
+        }
+
+        private void DrawShop(Rect card, float k)
+        {
+            card.height = (140 + BoardShop.Items.Length * 64) * k;
+            GUI.Box(card, GUIContent.none, _panel);
+            GUI.Label(new Rect(card.x, card.y + 14 * k, card.width, 50 * k), "Surfbrett-Shop", new GUIStyle(_big) { fontSize = (int)(34 * k) });
+            GUI.Label(new Rect(card.x, card.y + 64 * k, card.width, 30 * k), $"Dein Konto: {_root.Wallet} Münzen   {_shopMessage}", _mid);
+            float y = card.y + 110 * k;
+            foreach (var item in BoardShop.Items)
+            {
+                var prev = GUI.color;
+                GUI.color = CharacterView.Hex(item.ColorHex);
+                GUI.DrawTexture(new Rect(card.x + 24 * k, y + 8 * k, 70 * k, 26 * k), _barTex);
+                GUI.color = prev;
+                GUI.Label(new Rect(card.x + 110 * k, y + 4 * k, card.width - 330 * k, 34 * k), item.Name, _small);
+                var br = new Rect(card.xMax - 210 * k, y, 186 * k, 48 * k);
+                bool owned = _root.OwnsBoard(item.Id);
+                if (owned && _root.SelectedBoard == item.Id) GUI.Label(br, "Ausgewählt", _chip);
+                else if (owned) { if (GUI.Button(br, "Wählen", _button)) _root.SelectBoard(item.Id); }
+                else if (GUI.Button(br, item.Price + " Münzen", _button))
+                {
+                    var result = _root.BuyBoard(item.Id);
+                    _shopMessage = result == BoardShop.BuyResult.Bought ? "Gekauft!" : result == BoardShop.BuyResult.NotEnoughCoins ? "Zu wenig Münzen" : "";
+                }
+                y += 64 * k;
             }
         }
 

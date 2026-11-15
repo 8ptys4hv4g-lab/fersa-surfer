@@ -57,6 +57,9 @@ namespace WorldRush.Core
         public LevelDefinition Level { get; private set; }
         public bool IsInWater => Level != null && Level.IsWater(PlayerZ);
         public int Tricks { get; private set; }
+        public int JumpCount { get; private set; }
+        public int SlideCount { get; private set; }
+        public int PowerUpsCollected { get; private set; }
         public int LevelCoinsTotal { get; private set; }
         public float LevelProgress => Level == null ? 0f : Math.Min(1f, PlayerZ / Level.Length);
         public int Stars => LevelDefinition.StarsFor(Score.Coins, LevelCoinsTotal);
@@ -175,7 +178,10 @@ namespace WorldRush.Core
             {
                 var cmd = _pending.Dequeue();
                 if (cmd == RunnerCommand.Jump && IsInWater && Motor.IsJumping && !_trickUsed) { DoTrick(); continue; }
+                bool wasJumping = Motor.IsJumping, wasSliding = Motor.IsSliding;
                 Motor.Apply(cmd);
+                if (cmd == RunnerCommand.Jump && !wasJumping && Motor.IsJumping) JumpCount++;
+                if (cmd == RunnerCommand.Slide && !wasSliding && Motor.IsSliding) SlideCount++;
             }
 
             float remaining = Math.Min(deltaTime, _config.MaxFrameDelta);
@@ -253,6 +259,7 @@ namespace WorldRush.Core
                 if (Math.Abs(x - Lanes.ToX(p.Lane, _config.LaneWidth)) > _config.CoinPickupRadius + 0.1f) continue;
                 if (feet > 1.8f) continue;
                 p.Collected = true;
+                PowerUpsCollected++;
                 ActivatePowerUp(p.Kind);
             }
 
@@ -343,6 +350,9 @@ namespace WorldRush.Core
             Invulnerable = 0f;
             _nextSkyCoinId = 0;
             Tricks = 0;
+            JumpCount = 0;
+            SlideCount = 0;
+            PowerUpsCollected = 0;
             LevelCoinsTotal = 0;
             _trickUsed = false;
             Speed = _config.StartSpeed;

@@ -19,6 +19,15 @@ namespace WorldRush.Runtime
         private readonly Transform _shield;
         private float _phase;
         private float _flip;
+        private Material _boardMat;
+
+        /// <summary>Farbe des Surfbretts (aus dem Shop).</summary>
+        public void SetBoardColor(Color c)
+        {
+            if (_boardMat == null) return;
+            SetColor(_boardMat, c);
+            _boardMat.SetColor("_EmissionColor", c * 2.2f);
+        }
 
         /// <summary>Salto-Animation starten.</summary>
         public void Trick() => _flip = 1f;
@@ -104,8 +113,8 @@ namespace WorldRush.Runtime
                 BuildPlaceholder();
             }
 
-            var boardMat = MaterialFactory.Create(Hex("#3de8ff"), 0.9f, Hex("#3de8ff") * 2.2f);
-            _board = Part(PrimitiveType.Cube, Root, boardMat, new Vector3(0, -0.05f, 0), new Vector3(0.9f, 0.09f, 2.1f));
+            _boardMat = MaterialFactory.Create(Hex("#3de8ff"), 0.9f, Hex("#3de8ff") * 2.2f);
+            _board = Part(PrimitiveType.Cube, Root, _boardMat, new Vector3(0, -0.05f, 0), new Vector3(0.9f, 0.09f, 2.1f));
             _board.SetActive(false);
 
             _shield = new GameObject("Shield").transform;

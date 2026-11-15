@@ -15,6 +15,11 @@ namespace WorldRush.Core
         public int HighScore;
         public int TotalCoins;
         public int RunsPlayed;
+        public int Wallet;
+        public int OwnedBoards;
+        public int SelectedBoard;
+        public int MissionSet = -1;
+        public int Mission0, Mission1, Mission2;
 
         public string ToJson()
         {
@@ -23,7 +28,14 @@ namespace WorldRush.Core
             sb.Append("\"schemaVersion\":").Append(SchemaVersion.ToString(CultureInfo.InvariantCulture)).Append(',');
             sb.Append("\"highScore\":").Append(HighScore.ToString(CultureInfo.InvariantCulture)).Append(',');
             sb.Append("\"totalCoins\":").Append(TotalCoins.ToString(CultureInfo.InvariantCulture)).Append(',');
-            sb.Append("\"runsPlayed\":").Append(RunsPlayed.ToString(CultureInfo.InvariantCulture));
+            sb.Append("\"runsPlayed\":").Append(RunsPlayed.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"wallet\":").Append(Wallet.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"ownedBoards\":").Append(OwnedBoards.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"selectedBoard\":").Append(SelectedBoard.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"missionSet\":").Append(MissionSet.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"mission0\":").Append(Mission0.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"mission1\":").Append(Mission1.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"mission2\":").Append(Mission2.ToString(CultureInfo.InvariantCulture));
             sb.Append('}');
             return sb.ToString();
         }
@@ -42,6 +54,14 @@ namespace WorldRush.Core
             data.HighScore = ReadNonNegative(trimmed, "highScore");
             data.TotalCoins = ReadNonNegative(trimmed, "totalCoins");
             data.RunsPlayed = ReadNonNegative(trimmed, "runsPlayed");
+            data.Wallet = ReadNonNegative(trimmed, "wallet");
+            data.OwnedBoards = ReadNonNegative(trimmed, "ownedBoards");
+            data.SelectedBoard = ReadNonNegative(trimmed, "selectedBoard");
+            data.MissionSet = TryReadInt(trimmed, "missionSet", out int set) ? set : -1;
+            data.Mission0 = ReadNonNegative(trimmed, "mission0");
+            data.Mission1 = ReadNonNegative(trimmed, "mission1");
+            data.Mission2 = ReadNonNegative(trimmed, "mission2");
+            if (!BoardShop.Owns(data, data.SelectedBoard)) data.SelectedBoard = 0; // manipulierte Auswahl abfangen
             return true;
         }
 
