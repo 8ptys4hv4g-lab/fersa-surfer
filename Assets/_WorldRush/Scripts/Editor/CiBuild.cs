@@ -15,7 +15,7 @@ namespace WorldRush.EditorTools
     {
         public static void Build()
         {
-            string path = Arg("-customBuildPath") ?? "Build/FersaSurfer";
+            string path = Arg("-customBuildPath") ?? "Build/FersaWave";
             BuildTarget target = EditorUserBuildSettings.activeBuildTarget;
             var group = BuildPipeline.GetBuildTargetGroup(target);
             var named = NamedBuildTarget.FromBuildTargetGroup(group);
@@ -39,9 +39,25 @@ namespace WorldRush.EditorTools
                 EditorUserBuildSettings.buildAppBundle = false; // APK zum direkten Installieren
                 if (!path.EndsWith(".apk")) path += ".apk";
             }
+            else if (target == BuildTarget.iOS)
+            {
+                // iPhone/iPad: Unity erzeugt ein Xcode-Projekt; signiert und hochgeladen wird auf dem Mac-Server (siehe .github/workflows/ios.yml).
+                PlayerSettings.SetApplicationIdentifier(named, "com.fersawave.game");
+                PlayerSettings.iOS.targetOSVersionString = "15.0";
+                PlayerSettings.iOS.appleEnableAutomaticSigning = true;
+                string team = Environment.GetEnvironmentVariable("APPLE_TEAM_ID");
+                if (!string.IsNullOrEmpty(team)) PlayerSettings.iOS.appleDeveloperTeamID = team;
+                string run = Environment.GetEnvironmentVariable("BUILD_NUMBER") ?? Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER");
+                PlayerSettings.iOS.buildNumber = string.IsNullOrEmpty(run) ? "1" : run; // muss bei jedem Upload steigen
+                PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
+                PlayerSettings.allowedAutorotateToLandscapeLeft = true;
+                PlayerSettings.allowedAutorotateToLandscapeRight = true;
+                PlayerSettings.allowedAutorotateToPortrait = false;
+                PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            }
             else if (target == BuildTarget.StandaloneWindows64 && !path.EndsWith(".exe"))
             {
-                path += "/FersaSurfer.exe";
+                path += "/FersaWave.exe";
             }
 
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions

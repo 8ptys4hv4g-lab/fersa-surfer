@@ -1,0 +1,96 @@
+name: iPhone/iPad bauen → TestFlight
+# Startet nur per Knopfdruck: GitHub → Actions → "iPhone/iPad bauen → TestFlight" → Run workflow.
+# Ablauf: 1) Linux-Server erzeugt mit Unity das Xcode-Projekt  2) Mac-Server signiert und lädt zu App Store Connect hoch.
+# Benötigte Secrets: UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD, APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8
+# Anleitung: docs/store/IOS_CLOUD_BUILD.md
+on:
+  workflow_dispatch:
+    inputs:
+      unityVersion:
+        description: 'Unity-Version (auto = aus ProjectSettings/ProjectVersion.txt)'
+        default: 'auto'
+        required: true
+
+jobs:
+  xcode-project:
+    name: 1 · Xcode-Projekt erzeugen (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Speicher freimachen
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-iOS-${{ hashFiles('Packages/manifest.json') }}
+          restore-keys: Library-iOS-
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        with:
+          unityVersion: ${{ inputs.unityVersion }}
+          targetPlatform: iOS
+          buildMethod: WorldRush.EditorTools.CiBuild.Build
+          buildName: FersaWave
+          customParameters: -BUILD_NUMBER ${{ github.run_number }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FersaWave-Xcode
+          path: build/iOS
+          retention-days: 1
+
+  testflight:
+    name: 2 · Signieren und zu TestFlight hochladen (Mac)
+    needs: xcode-project
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      TEAM: ${{ secrets.APPLE_TEAM_ID }}
+      KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: FersaWave-Xcode
+          path: ios
+      - name: App-Store-Connect-Schlüssel bereitstellen
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s' "${{ secrets.ASC_KEY_P8 }}" > "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
+      - name: Archivieren (automatische Signatur über die Apple-API)
+        run: |
+          PROJ=$(find ios -name "Unity-iPhone.xcodeproj" -maxdepth 4 | head -1)
+          echo "Projekt: $PROJ"
+          xcodebuild -project "$PROJ" -scheme Unity-iPhone -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/FersaWave.xcarchive" archive \
+            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER"
+      - name: Exportieren und zu App Store Connect hochladen
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/FersaWave.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER"
+          echo "Hochgeladen. In App Store Connect → TestFlight erscheint der Build nach der Verarbeitung (meist 10–30 Minuten)."
+      - name: Schlüssel entfernen
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"
