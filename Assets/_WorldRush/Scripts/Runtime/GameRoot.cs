@@ -264,7 +264,7 @@ namespace WorldRush.Runtime
             _player.rotation = Quaternion.Euler(0f, 0f, (Lanes.ToX(motor.TargetLane, cfg.LaneWidth) - motor.LateralX) * -4f);
             bool running = _session.State == GameState.Running;
             _character.Animate(motor, running, motor.IsHovering || _session.IsInWater, _session.IsPowerActive(PowerUpKind.Shield), _session.Speed, Time.deltaTime);
-            bool blink = running && _session.Invulnerable > 0f && !motor.IsHovering && Mathf.FloorToInt(Time.time * 11f) % 2 == 0;
+            bool blink = running && _session.Invulnerable > 0f && _session.Invulnerable < 1f && !motor.IsHovering && Mathf.FloorToInt(Time.time * 11f) % 2 == 0;
             _character.Root.gameObject.SetActive(!blink);
             if (running && motor.IsHovering && Random.value < 0.6f) Burst(_player.position - Vector3.forward * 0.9f, NeonCyan, 1);
 
@@ -724,7 +724,7 @@ namespace WorldRush.Runtime
         private int _levelIndex;
         private GameObject _levelRoot;
         private Material _rockMat, _foamMat, _woodMat, _waterMat;
-        private readonly List<(Mesh mesh, Vector3[] baseVertices, Transform transform)> _waters = new List<(Mesh, Vector3[], Transform)>();
+        private readonly List<(Mesh mesh, Vector3[] baseVertices, Vector3[] buffer, Transform transform)> _waters = new List<(Mesh, Vector3[], Vector3[], Transform)>();
 
         public int LevelIndex => _levelIndex;
         public string LevelLabel => $"Level {_levelIndex + 1} · {_session.Level?.Name}";
@@ -788,7 +788,8 @@ namespace WorldRush.Runtime
                 go.transform.position = new Vector3(0f, 0.45f, start);
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 go.AddComponent<MeshRenderer>().sharedMaterial = _waterMat;
-                _waters.Add((mesh, mesh.vertices, go.transform));
+                var baseVerts = mesh.vertices;
+                _waters.Add((mesh, baseVerts, new Vector3[baseVerts.Length], go.transform));
                 foreach (var z in new[] { start, end }) Box(_levelRoot.transform, _foamMat, new Vector3(0f, 0.5f, z), new Vector3(60f, 0.3f, 0.8f));
             }
 
@@ -808,10 +809,9 @@ namespace WorldRush.Runtime
         private void UpdateLevelView()
         {
             float t = Time.time;
-            foreach (var (mesh, baseVertices, tr) in _waters)
+            foreach (var (mesh, baseVertices, verts, tr) in _waters)
             {
-                if (Mathf.Abs(tr.position.z - _session.PlayerZ) > 260f) continue;
-                var verts = new Vector3[baseVertices.Length];
+                if (tr.position.z > _session.PlayerZ + 240f || tr.position.z + 400f < _session.PlayerZ) continue;
                 float z0 = tr.position.z;
                 for (int i = 0; i < verts.Length; i++)
                 {
