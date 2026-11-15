@@ -19,7 +19,13 @@ MODS=$(dirname "$(find $REF/mods -name UnityEngine.CoreModule.dll | head -1)")
   echo '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>netstandard2.1</TargetFramework><LangVersion>9.0</LangVersion><EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0649;CS0414;CS0169</NoWarn></PropertyGroup><ItemGroup>'
   echo '<Compile Include="../../Assets/_WorldRush/Scripts/Runtime/**/*.cs" /><Compile Include="../../Assets/_WorldRush/Scripts/Editor/**/*.cs" /><Compile Include="UrpStubs.cs" />'
   echo '<ProjectReference Include="../CoreLib/CoreLib.csproj" /></ItemGroup><ItemGroup>'
-  for f in $MODS/UnityEngine*.dll; do echo "<Reference Include=\"$(basename "$f" .dll)\"><HintPath>$f</HintPath></Reference>"; done
+  # Nur Module verwenden, die das Projekt auch hat: optionale Module müssen in Packages/manifest.json stehen.
+  OPTIONAL="ai androidjni animation assetbundle audio cloth director imageconversion imgui jsonserialize particlesystem physics physics2d screencapture terrain terrainphysics tilemap ui uielements umbra unityanalytics unitywebrequest unitywebrequestassetbundle unitywebrequestaudio unitywebrequesttexture unitywebrequestwww vehicles video vr wind xr"
+  for f in $MODS/UnityEngine*.dll; do
+    mod=$(basename "$f" .dll | sed 's/^UnityEngine\.//; s/Module$//' | tr '[:upper:]' '[:lower:]')
+    if echo " $OPTIONAL " | grep -q " $mod " && ! grep -q "\"com.unity.modules.$mod\"" ../../Packages/manifest.json; then continue; fi
+    echo "<Reference Include=\"$(basename "$f" .dll)\"><HintPath>$f</HintPath></Reference>"
+  done
   echo "<Reference Include=\"UnityEditor\"><HintPath>$REF/sdk/lib/UnityEditor.dll</HintPath></Reference>"
   echo '</ItemGroup></Project>'
 } > UnityCompileCheck.csproj
